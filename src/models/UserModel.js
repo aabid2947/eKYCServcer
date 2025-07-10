@@ -1,6 +1,21 @@
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+
+// This sub-schema tracks the usage of a specific service by this user.
+const UsedServiceSchema = new mongoose.Schema({
+  service: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Service',
+    required: true,
+  },
+  usageCount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+}, {_id: false}); // _id: false prevents creating a separate _id for this subdocument
 
 const UserSchema = new mongoose.Schema(
   {
@@ -21,7 +36,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please add a password'],
       minlength: 6,
-      select: false, // Do not return password by default
+      select: false,
     },
     isVerified: {
       type: Boolean,
@@ -29,6 +44,11 @@ const UserSchema = new mongoose.Schema(
     },
     emailVerificationToken: String,
     emailVerificationExpires: Date,
+    // --- MODIFIED FIELDS START ---
+    // The 'credits' field has been removed.
+    // The 'purchasedServices' array is renamed to 'usedServices'.
+    usedServices: [UsedServiceSchema],
+    // --- MODIFIED FIELDS END ---
   },
   { timestamps: true }
 );
@@ -38,7 +58,6 @@ UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
   }
-
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
@@ -46,7 +65,7 @@ UserSchema.pre('save', async function (next) {
 
 // Match entered password to hashed password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return await bcrypt.compare(entered-password, this.password);
 };
 
 // Generate and hash email verification token

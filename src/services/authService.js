@@ -1,4 +1,4 @@
-import User from '../models/User.js';
+import User from '../models/UserModel.js';
 import sendEmail from '../utils/sendEmail.js';
 import crypto from 'crypto';
 import generateToken from '../utils/generateToken.js';
@@ -71,9 +71,9 @@ export const loginUser = async (loginData) => {
         throw new Error('Invalid credentials');
     }
 
-    if (!user.isVerified) {
-        throw new Error('Please verify your email to log in');
-    }
+    // if (!user.isVerified) {
+    //     throw new Error('Please verify your email to log in');
+    // }
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
