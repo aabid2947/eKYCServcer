@@ -1,7 +1,7 @@
 
 import express from 'express';
 import { param } from 'express-validator';
-import { getAllServices, getServiceById } from '../controllers/serviceController.js';
+import { getAllServices, getServiceById } from '../controllers/servicesController.js';
 
 const router = express.Router();
 

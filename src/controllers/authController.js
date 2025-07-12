@@ -26,8 +26,9 @@ export const verifyEmail = async (req, res, next) => {
 };
 
 export const login = async (req, res, next) => {
-  const errors = validationResult(req);
+  
   console.log(req.body)
+  const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }

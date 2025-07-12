@@ -1,10 +1,10 @@
 
 
 import express from 'express';
-import { check } from 'express-validator';
+import { check ,param,body} from 'express-validator';
 import { register, login, getAdminDashboard } from '../controllers/adminController.js';
 import { protectAdmin } from '../middleware/authMiddleware.js';
-
+import { createService,updateService,deleteService } from '../controllers/serviceManagement.js';
 const router = express.Router();
 
 // @route   POST /api/admin/register

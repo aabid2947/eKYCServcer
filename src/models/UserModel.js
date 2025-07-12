@@ -65,7 +65,7 @@ UserSchema.pre('save', async function (next) {
 
 // Match entered password to hashed password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(entered-password, this.password);
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Generate and hash email verification token

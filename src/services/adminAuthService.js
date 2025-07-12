@@ -1,5 +1,5 @@
 
-import Admin from '../models/Admin.js';
+import Admin from '../models/AdminModel.js';
 import generateToken from '../utils/generateToken.js';
 
 // NOTE: In a real-world production app, you might disable this endpoint

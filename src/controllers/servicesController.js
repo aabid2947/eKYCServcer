@@ -1,5 +1,5 @@
 
-import Service from '../models/Service.js';
+import Service from '../models/ServiceModel.js';
 
 // @desc    Get all available services
 // @route   GET /api/services
