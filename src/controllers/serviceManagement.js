@@ -1,5 +1,5 @@
 
-import Service from '../models/ServiceModel.js';
+import Service from '../models/Service.js';
 
 // @desc    Create a new service
 // @route   POST /api/admin/services

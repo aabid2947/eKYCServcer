@@ -1,18 +1,18 @@
+// models/Service.js
 
 import mongoose from 'mongoose';
 
-// A sub-schema for discounts to provide structure and flexibility.
 const DiscountSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      required: [true, 'Discount type is required (e.g., "percentage" or "fixed")'],
+      required: true,
       enum: ['percentage', 'fixed'],
     },
     value: {
       type: Number,
-      required: [true, 'Discount value is required'],
-      min: [0, 'Discount value cannot be negative'],
+      required: true,
+      min: 0,
     },
   },
   { _id: false }
@@ -23,6 +23,12 @@ const ServiceSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, 'Please provide a service name'],
+      trim: true,
+    },
+    // --- NEW REQUIRED & UNIQUE FIELD ---
+    service_key: {
+      type: String,
+      required: [true, 'Please provide a unique service key'],
       unique: true,
       trim: true,
     },
@@ -32,21 +38,25 @@ const ServiceSchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
-      required: [true, 'Please provide an image URL for the service'],
+      required: [false, 'Please provide an image URL for the service'],
     },
     price: {
       type: Number,
       required: [true, 'Please set a price for the service'],
-      min: [0, 'Price cannot be negative'],
+      min: 0,
+    },
+    // --- NEW FIELD TO CONTROL VISIBILITY ---
+    is_active: {
+      type: Boolean,
+      default: true,
     },
     globalUsageCount: {
       type: Number,
       default: 0,
     },
-    // --- NEW OPTIONAL FIELD ---
     discount: {
       type: DiscountSchema,
-      required: false, // This makes the entire discount object optional
+      required: false,
     },
   },
   {
