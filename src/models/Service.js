@@ -18,6 +18,28 @@ const DiscountSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// --- NEW SUB-DOCUMENT FOR DEFINING DYNAMIC FIELDS ---
+const FieldSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Please provide a field name (e.g., "pan_number")'],
+  },
+  label: {
+    type: String,
+    required: [true, 'Please provide a user-friendly label (e.g., "PAN Number")'],
+  },
+  type: {
+    type: String,
+    required: [true, 'Please specify the field type'],
+    enum: ['text', 'number', 'file', 'date', 'string', 'object', 'array'], // Added more types for output
+  },
+  placeholder: {
+    type: String,
+    required: false,
+  },
+}, { _id: false });
+
+
 const ServiceSchema = new mongoose.Schema(
   {
     name: {
@@ -25,12 +47,16 @@ const ServiceSchema = new mongoose.Schema(
       required: [true, 'Please provide a service name'],
       trim: true,
     },
-    // --- NEW REQUIRED & UNIQUE FIELD ---
     service_key: {
       type: String,
       required: [true, 'Please provide a unique service key'],
       unique: true,
       trim: true,
+    },
+    category:{
+      type: String,
+      required: [true, 'Please provide a Category'],
+      unique: true
     },
     description: {
       type: String,
@@ -38,14 +64,13 @@ const ServiceSchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
-      required: [false, 'Please provide an image URL for the service'],
+      required: false,
     },
     price: {
       type: Number,
       required: [true, 'Please set a price for the service'],
       min: 0,
     },
-    // --- NEW FIELD TO CONTROL VISIBILITY ---
     is_active: {
       type: Boolean,
       default: true,
@@ -58,6 +83,26 @@ const ServiceSchema = new mongoose.Schema(
       type: DiscountSchema,
       required: false,
     },
+    // --- NEW DYNAMIC FIELDS ---
+    endpoint: {
+      type: String,
+      required: [true, 'Please provide the API endpoint path for this service'],
+      trim: true,
+    },
+    apiType: {
+      type: String,
+      required: [true, 'Please specify the API type'],
+      enum: ['json', 'form'],
+      default: 'json',
+    },
+    inputFields: {
+      type: [FieldSchema],
+      default: [],
+    },
+    outputFields: {
+      type: [FieldSchema],
+      default: [],
+    }
   },
   {
     timestamps: true,

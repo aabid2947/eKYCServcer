@@ -1,5 +1,3 @@
-// routes/serviceRoute.js
-
 import express from 'express';
 import {
   getAllServices,
@@ -9,30 +7,24 @@ import {
   deleteServiceById,
   deleteAllServices,
 } from '../controllers/serviceController.js';
-
-// Import security middleware
-import { protect, authorizeAdmin } from '../middleware/authMiddleware.js';
+import { protect, authorize } from '../middleware/authMiddleware.js'; // Updated imports
 
 const router = express.Router();
 
-// --- Public Routes ---
-// Anyone can get the list of active services or a single service by its ID
-router.route('/').get(protect,getAllServices)
-                //  .delete(deleteAllServices);
-router.route('/:id').get(protect,getServiceById);
+router.route('/').get(protect, getAllServices);
+
+// Public route to get a single service
+router.route('/:id').get(getServiceById);
 
 
-// --- Admin-Only Routes ---
-// Chaining middleware: The request must first pass `protect` (is logged in),
-// then `authorizeAdmin` (user has 'admin' role).
-
-// Route to create a new service
-// router.route('/').post( createService);
-
-// Routes to update or delete a service by its ID
+router.route('/create').post(protect, authorize('admin'), createService);
 router
   .route('/:id')
-  .put( updateServiceById)
-  .delete(protect, authorizeAdmin, deleteServiceById);
+  .put(protect, authorize('admin'), updateServiceById)
+  .delete(protect, authorize('admin'), deleteServiceById);
+
+  
+router.route('/deleteAll').delete(protect, authorize('admin'), deleteAllServices);
+
 
 export default router;

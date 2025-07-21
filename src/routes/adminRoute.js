@@ -1,28 +1,11 @@
-
-
 import express from 'express';
-import { check ,param,body} from 'express-validator';
-import { register, login, getAdminDashboard } from '../controllers/adminController.js';
-import { protectAdmin } from '../middleware/authMiddleware.js';
-import { createService,updateService,deleteService } from '../controllers/serviceManagement.js';
+import { check } from 'express-validator';
+import { register, login, getAdminDashboard ,getAllAdmin} from '../controllers/adminController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js'; // Import new middleware
+
 const router = express.Router();
 
-// @route   POST /api/admin/register
-// @desc    Register a new admin
-// @access  Public (should be restricted in production)
-router.post(
-  '/register',
-  [
-    check('name', 'Name is required').not().isEmpty(),
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Please enter a password with 8 or more characters').isLength({ min: 8 }),
-  ],
-  register
-);
-
-// @route   POST /api/admin/login
-// @desc    Authenticate admin & get token
-// @access  Public
+// Public route for an admin to log in. The controller handles the role check.
 router.post(
   '/login',
   [
@@ -32,53 +15,27 @@ router.post(
   login
 );
 
-// @route   GET /api/admin/dashboard
-// @desc    Example protected route for admins
-// @access  Private/Admin
-router.get('/dashboard', protectAdmin, getAdminDashboard);
-
+// This route to create new admins is now protected and can only be accessed by existing admins.
 router.post(
-  '/services',
-  protectAdmin,
+  '/register',
+  protect, // First, ensure user is logged in
+  authorize('admin'), // Then, ensure user has 'admin' role
   [
-    body('name', 'Service name is required').not().isEmpty().trim(),
-    body('description', 'Description is required').not().isEmpty().trim(),
-    body('imageUrl', 'A valid image URL is required').isURL(),
-    body('price', 'Price must be a non-negative number').isFloat({ min: 0 }),
-    body('discount.type').optional().isIn(['percentage', 'fixed']),
-    body('discount.value').optional().isFloat({ min: 0 }),
+    check('name', 'Name is required').not().isEmpty(),
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
   ],
-  createService
+  register
+);
+router.get(
+  '/all',
+  protect, // First, ensure user is logged in
+  authorize('admin'), // Then, ensure user has 'admin' role
+  getAllAdmin
 );
 
-// @route   PUT /api/admin/services/:serviceId
-// @desc    Update a service
-// @access  Private/Admin
-router.put(
-  '/services/:serviceId',
-  protectAdmin,
-  [
-    param('serviceId').isMongoId().withMessage('Invalid Service ID'),
-    // Validations for update are optional, but if provided, they should be valid
-    body('name').optional().not().isEmpty().trim(),
-    body('description').optional().not().isEmpty().trim(),
-    body('imageUrl').optional().isURL(),
-    body('price').optional().isFloat({ min: 0 }),
-    body('discount').optional({ nullable: true }).isObject(),
-    body('discount.type').optional().isIn(['percentage', 'fixed']),
-    body('discount.value').optional().isFloat({ min: 0 }),
-  ],
-  updateService
-);
 
-// @route   DELETE /api/admin/services/:serviceId
-// @desc    Delete a service
-// @access  Private/Admin
-router.delete(
-  '/services/:serviceId',
-  protectAdmin,
-  [param('serviceId').isMongoId().withMessage('Invalid Service ID')],
-  deleteService
-);
+// Protected and Authorized admin dashboard route
+router.get('/dashboard', protect, authorize('admin'), getAdminDashboard);
 
-export default router;
+export default router

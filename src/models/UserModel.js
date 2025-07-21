@@ -1,9 +1,7 @@
-
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
-// This sub-schema tracks the usage of a specific service by this user.
 const UsedServiceSchema = new mongoose.Schema({
   service: {
     type: mongoose.Schema.Types.ObjectId,
@@ -15,7 +13,7 @@ const UsedServiceSchema = new mongoose.Schema({
     required: true,
     default: 0,
   },
-}, {_id: false}); // _id: false prevents creating a separate _id for this subdocument
+}, {_id: false});
 
 const UserSchema = new mongoose.Schema(
   {
@@ -38,17 +36,19 @@ const UserSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
+    // --- NEW FIELD ---
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
     isVerified: {
       type: Boolean,
       default: false,
     },
     emailVerificationToken: String,
     emailVerificationExpires: Date,
-    // --- MODIFIED FIELDS START ---
-    // The 'credits' field has been removed.
-    // The 'purchasedServices' array is renamed to 'usedServices'.
     usedServices: [UsedServiceSchema],
-    // --- MODIFIED FIELDS END ---
   },
   { timestamps: true }
 );

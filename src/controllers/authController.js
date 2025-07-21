@@ -8,6 +8,7 @@ export const register = async (req, res, next) => {
   }
 
   try {
+   
     const result = await authService.registerUser(req.body);
     res.status(201).json({ success: true, data: result });
   } catch (error) {
@@ -26,8 +27,7 @@ export const verifyEmail = async (req, res, next) => {
 };
 
 export const login = async (req, res, next) => {
-  
-  console.log(req.body)
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });

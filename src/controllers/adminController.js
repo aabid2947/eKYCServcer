@@ -1,7 +1,10 @@
+// controllers/adminController.js
 
 import { validationResult } from 'express-validator';
-import * as adminAuthService from '../services/adminAuthService.js';
+import User from '../models/UserModel.js'; // Use the User model
+import generateToken from '../utils/generateToken.js';
 
+// This function now creates a new User with the 'admin' role
 export const register = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -9,37 +12,101 @@ export const register = async (req, res, next) => {
   }
 
   try {
-    const adminData = await adminAuthService.registerAdmin(req.body);
-    res.status(201).json({ success: true, data: adminData });
+    const { name, email, password } = req.body;
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+        res.status(400);
+        throw new Error('An account with that email already exists');
+    }
+
+    // Create a new user with the role explicitly set to 'admin'
+    const adminUser = await User.create({ name, email, password, role: 'admin', isVerified: true });
+
+    if (adminUser) {
+        res.status(201).json({
+            success: true,
+            data: {
+                _id: adminUser._id,
+                name: adminUser.name,
+                email: adminUser.email,
+                role: adminUser.role,
+            }
+        });
+    } else {
+        res.status(400);
+        throw new Error('Invalid user data');
+    }
   } catch (error) {
-    // Let the central error handler manage the response
-    res.status(400);
     next(error);
   }
 };
 
+// This function now logs in a user and verifies they have the 'admin' role
 export const login = async (req, res, next) => {
-  console.log(req)
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
   try {
-    const loginData = await adminAuthService.loginAdmin(req.body);
-    res.status(200).json({ success: true, data: loginData });
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select('+password');
+
+    // Check if user exists AND if they are an admin
+    if (!user || user.role !== 'admin') {
+      res.status(401);
+      throw new Error('Invalid credentials or not an admin');
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      res.status(401);
+      throw new Error('Invalid credentials');
+    }
+
+    const token = generateToken(user._id, user.role);
+
+    res.status(200).json({
+        success: true,
+        data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            token,
+        }
+    });
+
   } catch (error) {
-    // Set status code for failed login attempts
-    res.status(401);
     next(error);
   }
 };
 
 // Example of a protected admin-only endpoint
 export const getAdminDashboard = async (req, res) => {
-    // The req.admin object is attached by the protectAdmin middleware
+    // The req.user object is attached by the 'protect' middleware
     res.status(200).json({
         success: true,
-        message: `Welcome to the admin dashboard, ${req.admin.name}`,
+        message: `Welcome to the admin dashboard, ${req.user.name}`,
+        data: {
+            id: req.user._id,
+            email: req.user.email,
+            role: req.user.role,
+        }
     });
+};
+
+export const getAllAdmin = async (req, res, next) => {
+    try {
+        const admins = await User.find({ role: 'admin' }).select('-password');
+        res.status(200).json({
+            success: true,
+            count: admins.length,
+            data: admins
+        });
+    } catch (error) {
+        next(error);
+    }
 };

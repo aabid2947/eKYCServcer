@@ -56,8 +56,7 @@ export const createService = async (req, res, next) => {
     }
 
     // 2. Use insertMany for efficient bulk creation
-    // This is much faster than a loop as it's a single database operation.
-    // Mongoose will also validate each object in the array against the schema.
+    // Mongoose will validate each object in the array against the updated schema.
     const createdServices = await Service.insertMany(servicesData);
 
     // 3. Send a success response
@@ -67,9 +66,7 @@ export const createService = async (req, res, next) => {
       data: createdServices,
     });
   } catch (error) {
-    // This will catch any errors from insertMany, including:
-    // - Validation errors (e.g., a required field is missing)
-    // - Duplicate key errors (if a service_key already exists)
+    // This will catch any errors, including validation or duplicate key errors.
     next(error);
   }
 };
@@ -79,15 +76,16 @@ export const createService = async (req, res, next) => {
 // @access  Private (Admin Only)
 export const updateServiceById = async (req, res, next) => {
   try {
-    const serviceId = req.params.id;
-    const updateData = req.body;
-
-    const updatedService = await Service.findByIdAndUpdate(serviceId, updateData, {
-      new: true, // Return the modified document rather than the original
-      runValidators: true, // Run schema validators on update
+    const { id } = req.params;
+    const { name, service_key, description, endpoint, price, category, is_active } = req.body.changes;
+    const updateData = { name, service_key, description, endpoint, price, category, is_active };
+   
+    
+    const updated = await Service.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
     });
-
-    if (!updatedService) {
+    if (!updated) {
       res.status(404);
       throw new Error('Service not found with that ID');
     }
@@ -95,7 +93,7 @@ export const updateServiceById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Service updated successfully',
-      data: updatedService,
+      data: updated,
     });
   } catch (error) {
     next(error);
@@ -107,7 +105,8 @@ export const updateServiceById = async (req, res, next) => {
 // @access  Private (Admin Only)
 export const deleteServiceById = async (req, res, next) => {
   try {
-    const service = await Service.findByIdAndDelete(req.params.id);
+    const key = req.params.id; 
+    const service = await Service.findOneAndDelete({ service_key: key });
 
     if (!service) {
       res.status(404);
@@ -134,7 +133,7 @@ export const deleteAllServices = async (req, res, next) => {
       deletedCount: result.deletedCount
     });
   } catch (err) {
-    // let your error‐handling middleware pick this up
+    // let your error-handling middleware pick this up
     next(err);
   }
 };
