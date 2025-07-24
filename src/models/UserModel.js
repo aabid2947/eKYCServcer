@@ -23,20 +23,28 @@ const UserSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Please add an email'],
       unique: true,
+      sparse: true,
       match: [
         /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
         'Please add a valid email',
       ],
     },
+    mobile: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
     password: {
       type: String,
-      required: [true, 'Please add a password'],
       minlength: 6,
       select: false,
     },
-    // --- NEW FIELD ---
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -46,16 +54,38 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    emailVerificationToken: String,
-    emailVerificationExpires: Date,
+    emailOtp: String,
+    emailOtpExpires: Date,
+    mobileOtp: String,
+    mobileOtpExpires: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
     usedServices: [UsedServiceSchema],
   },
   { timestamps: true }
 );
 
+// Middleware to ensure either email or mobile is provided
+UserSchema.pre('save', function(next) {
+    if (this.googleId) return next();
+    if (!this.email && !this.mobile) {
+        return next(new Error('Either email or mobile number is required.'));
+    }
+    next();
+});
+
+// Middleware to ensure password is provided for standard email registration
+UserSchema.pre('save', function(next) {
+    if (this.googleId || this.isModified('password')) return next();
+    if (this.email && !this.password && this.isNew) {
+        return next(new Error('Password is required for email registration.'));
+    }
+    next();
+});
+
 // Encrypt password before saving
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
   const salt = await bcrypt.genSalt(10);
@@ -68,19 +98,38 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Generate and hash email verification token
-UserSchema.methods.getEmailVerificationToken = function () {
-  const verificationToken = crypto.randomBytes(20).toString('hex');
+// Generate and set email verification OTP
+UserSchema.methods.getEmailOtp = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  this.emailOtp = otp;
+  this.emailOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return otp;
+};
 
-  this.emailVerificationToken = crypto
+// Generate and set mobile verification OTP
+UserSchema.methods.getMobileOtp = function () {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    this.mobileOtp = otp;
+    this.mobileOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    return otp;
+};
+
+// Generate and hash password reset token
+UserSchema.methods.getPasswordResetToken = function () {
+  const resetToken = crypto.randomBytes(20).toString('hex');
+
+  // Hash token and set to passwordResetToken field
+  this.passwordResetToken = crypto
     .createHash('sha256')
-    .update(verificationToken)
+    .update(resetToken)
     .digest('hex');
 
-  this.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
+  // Set expire time to 15 minutes
+  this.passwordResetExpires = Date.now() + 15 * 60 * 1000;
 
-  return verificationToken;
+  return resetToken;
 };
+
 
 const User = mongoose.model('User', UserSchema);
 export default User;

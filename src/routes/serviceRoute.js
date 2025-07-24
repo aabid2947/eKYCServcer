@@ -11,7 +11,7 @@ import { protect, authorize } from '../middleware/authMiddleware.js'; // Updated
 
 const router = express.Router();
 
-router.route('/').get(protect, getAllServices);
+router.route('/').get( getAllServices);
 
 // Public route to get a single service
 router.route('/:id').get(getServiceById);
