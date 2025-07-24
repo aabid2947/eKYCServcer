@@ -1,23 +1,35 @@
 import admin from 'firebase-admin';
 
-// IMPORTANT: You must set up a service account for this to work.
-// 1. Go to your Firebase project settings -> Service accounts.
-// 2. Click "Generate new private key" and save the JSON file securely.
-// 3. Set an environment variable named GOOGLE_APPLICATION_CREDENTIALS
-//    to the full path of this JSON file.
-//    e.g., GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/serviceAccountKey.json"
-
+let serviceAccount;
 try {
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      // The SDK automatically finds the credentials from the environment variable.
-    });
-  }
-} catch (error) {
-  console.error('Firebase Admin Initialization Error:', error);
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} catch (e) {
+  console.error('Invalid or missing FIREBASE_SERVICE_ACCOUNT env var', e);
+  process.exit(1);
 }
 
+// Ensure projectId is set
+const projectId =
+  serviceAccount.project_id ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  process.env.FIREBASE_PROJECT_ID;
 
+if (!projectId) {
+  console.error('No projectId found in serviceAccount or environment');
+  process.exit(1);
+}
+
+// Initialize the SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      ...serviceAccount,
+      projectId,               // explicitly include it here
+    }),
+    projectId,                 // also set at root
+    // databaseURL: `https://${projectId}.firebaseio.com`,
+  });
+}
 /**
  * Verifies a Firebase ID token.
  * @param {string} token The Firebase ID token to verify.
