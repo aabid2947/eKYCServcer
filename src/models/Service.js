@@ -18,6 +18,20 @@ const DiscountSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const CategorySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  // This is the price for the entire category "combo"
+  combo_price: {
+    type: Number,
+    required: true,
+    min: 0,
+  }
+}, { _id: false });
+
 // --- NEW SUB-DOCUMENT FOR DEFINING DYNAMIC FIELDS ---
 const FieldSchema = new mongoose.Schema({
   name: {
@@ -71,6 +85,12 @@ const ServiceSchema = new mongoose.Schema(
       required: [true, 'Please set a price for the service'],
       min: 0,
     },
+     combo_price: {
+      type: Number,
+      required: [true, 'Please set a combo price for the category'],
+      min: 0,
+    },
+
     is_active: {
       type: Boolean,
       default: true,

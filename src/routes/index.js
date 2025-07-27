@@ -6,7 +6,7 @@ import verificationRoutes from './verificationRoute.js';
 import adminRoutes from './adminRoute.js';
 import transactionRoutes from './transactionRoute.js'
 import { reviewRouter, serviceReviewRoutes } from './reviewRoute.js';
-
+import paymentRoutes from './PaymentRoute.js';
 const router = express.Router();
 
 router.use('/auth', authRoutes);
@@ -24,5 +24,7 @@ router.use('/transactions', transactionRoutes)
 router.use('/reviews', reviewRouter);
 // For submitting a verification request for ANY service
 router.use('/verification', verificationRoutes);
+
+router.use('/payment', paymentRoutes);
 
 export default router;

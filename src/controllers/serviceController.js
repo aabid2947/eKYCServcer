@@ -46,30 +46,29 @@ export const getServiceById = async (req, res, next) => {
 // @access  Private (Admin Only)
 export const createService = async (req, res, next) => {
   try {
-    const servicesData = req.body;
+    const serviceData = req.body;
+    console.log('Creating service:', serviceData);
 
     // 1. Validate the input
-    // Ensure the body is a non-empty array.
-    if (!Array.isArray(servicesData) || servicesData.length === 0) {
-      res.status(400); // Bad Request
-      throw new Error('Request body must be a non-empty array of services.');
+    if (!serviceData || typeof serviceData !== 'object' || Array.isArray(serviceData)) {
+      res.status(400);
+      throw new Error('Request body must be a valid service object.');
     }
 
-    // 2. Use insertMany for efficient bulk creation
-    // Mongoose will validate each object in the array against the updated schema.
-    const createdServices = await Service.insertMany(servicesData);
+    // 2. Create the service using Mongoose
+    const createdService = await Service.create(serviceData);
 
     // 3. Send a success response
     res.status(201).json({
       success: true,
-      message: `${createdServices.length} service(s) created successfully`,
-      data: createdServices,
+      message: 'Service created successfully',
+      data: createdService,
     });
   } catch (error) {
-    // This will catch any errors, including validation or duplicate key errors.
     next(error);
   }
 };
+
 
 // @desc    Update an existing service by its ID
 // @route   PUT /api/services/:id

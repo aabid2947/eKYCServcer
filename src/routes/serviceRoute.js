@@ -17,7 +17,7 @@ router.route('/').get( getAllServices);
 router.route('/:id').get(getServiceById);
 
 
-router.route('/create').post(protect, authorize('admin'), createService);
+router.route('/create').post( createService);
 router
   .route('/:id')
   .put(protect, authorize('admin'), updateServiceById)

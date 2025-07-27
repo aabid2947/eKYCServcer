@@ -126,3 +126,22 @@ export const verifyOtp = async (req, res) => {
         res.status(401).json({ success: false, message: error.message });
     }
 };
+
+export const updateUserProfile = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Not authorized, no user ID provided.' });
+        }
+
+        const updatedUser = await authService.updateUserProfile(userId, req.body);
+        res.status(200).json({ success: true, data: updatedUser });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
