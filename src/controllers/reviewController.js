@@ -1,31 +1,14 @@
-import { check, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import Review from '../models/ReviewModel.js';
 import Transaction from '../models/TransactionModel.js';
-import Service from '../models/Service.js';
+// Service model is not directly needed for creation but good for context
+// import Service from '../models/Service.js';
 
 
 /**
- * @description Create a new review for a transaction.
+ * @description Create a new review for a transaction. The review can be general, for a service, or for a category.
  * @route POST /api/reviews
  * @access Private
- * @param {import('express').Request} req - Express request object.
- * @param {import('express').Response} res - Express response object.
- *
- * @example_request_body
- * {
- * "transactionId": "60c72b2f9b1d8c001f8e4c6a",
- * "rating": 5,
- * "comment": "Excellent service!"
- * }
- *
- * @example_success_response
- * {
- * "success": true,
- * "data": { ...review object... }
- * }
- *
- * @example_error_response
- * { "success": false, "error": "You have already submitted the maximum number of reviews." }
  */
 export const createReview = async (req, res) => {
   const errors = validationResult(req);
@@ -33,45 +16,59 @@ export const createReview = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { transactionId, rating, comment } = req.body;
+  const { transactionId, rating, comment, serviceId, category } = req.body;
   const userId = req.user.id;
 
   try {
-    // Check if user has already submitted 3 reviews
-    const userReviewCount = await Review.countDocuments({ user: userId });
-    if (userReviewCount >= 3) {
-      return res.status(403).json({ success: false, error: 'You have already submitted the maximum number of reviews (3).' });
-    }
-
-    // Verify the transaction exists, belongs to the user, and is completed
+    // 1. Verify the transaction exists, belongs to the user, and is completed
     const transaction = await Transaction.findById(transactionId);
-    if (!transaction || transaction.user.toString() !== userId) {
-      return res.status(404).json({ success: false, error: 'Transaction not found or does not belong to you.' });
+    if (!transaction) {
+      return res.status(404).json({ success: false, error: 'Transaction not found.' });
+    }
+    if (transaction.user.toString() !== userId) {
+      return res.status(403).json({ success: false, error: 'This transaction does not belong to you.' });
     }
     if (transaction.status !== 'completed') {
         return res.status(400).json({ success: false, error: 'Cannot review a transaction that was not completed.' });
     }
 
-    //  Check if a review for this transaction already exists
-    const existingReview = await Review.findOne({ transaction: transactionId });
-    if (existingReview) {
-      return res.status(400).json({ success: false, error: 'A review for this transaction already exists.' });
+    // 2. Check if the user has already reviewed the specific service or category.
+    // The database index provides a robust final check, but this gives a clearer error message.
+    if (serviceId) {
+      const existingServiceReview = await Review.findOne({ user: userId, service: serviceId });
+      if (existingServiceReview) {
+        return res.status(400).json({ success: false, error: 'You have already submitted a review for this service.' });
+      }
+    } else if (category) {
+      const existingCategoryReview = await Review.findOne({ user: userId, category });
+      if (existingCategoryReview) {
+        return res.status(400).json({ success: false, error: 'You have already submitted a review for this category.' });
+      }
     }
 
-    //  Create and save the new review
-    const review = await Review.create({
+    // 3. Prepare review data
+    const reviewData = {
       transaction: transactionId,
       user: userId,
-      service: transaction.service,
       rating,
       comment,
-    });
+    };
+
+    if (serviceId) {
+      reviewData.service = serviceId;
+    } else if (category) {
+      reviewData.category = category;
+    }
+
+    // 4. Create and save the new review
+    const review = await Review.create(reviewData);
 
     res.status(201).json({ success: true, data: review });
   } catch (error) {
     console.error(error);
+    // This will catch duplicate key errors from any of the unique indexes
     if (error.code === 11000) {
-        return res.status(400).json({ success: false, error: 'A review for this transaction has already been submitted.' });
+        return res.status(400).json({ success: false, error: 'A review for this transaction or item has already been submitted.' });
     }
     res.status(500).json({ success: false, error: 'Server Error' });
   }
@@ -82,8 +79,6 @@ export const createReview = async (req, res) => {
  * @description Update an existing review.
  * @route PATCH /api/reviews/:id
  * @access Private (Author only)
- * @param {import('express').Request} req - Express request object.
- * @param {import('express').Response} res - Express response object.
  */
 export const updateReview = async (req, res) => {
     const errors = validationResult(req);
@@ -98,7 +93,6 @@ export const updateReview = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Review not found' });
         }
 
-        // Check if the user is the author of the review
         if (review.user.toString() !== req.user.id) {
             return res.status(403).json({ success: false, error: 'Not authorized to update this review' });
         }
@@ -120,8 +114,6 @@ export const updateReview = async (req, res) => {
  * @description Get all reviews for a specific service.
  * @route GET /api/services/:serviceId/reviews
  * @access Public
- * @param {import('express').Request} req - Express request object.
- * @param {import('express').Response} res - Express response object.
  */
 export const getServiceReviews = async (req, res) => {
     try {
@@ -157,14 +149,15 @@ export const getServiceReviews = async (req, res) => {
 
 /**
  * @description Get all reviews written by the current user.
- * @route GET /api/users/me/reviews
+ * @route GET /api/reviews/me
  * @access Private
- * @param {import('express').Request} req - Express request object.
- * @param {import('express').Response} res - Express response object.
  */
 export const getMyReviews = async (req, res) => {
     try {
-        const reviews = await Review.find({ user: req.user.id }).populate('service', 'name');
+        const reviews = await Review.find({ user: req.user.id })
+            .populate('service', 'name')
+            .populate('user', 'name');
+
         res.status(200).json({ success: true, count: reviews.length, data: reviews });
     } catch (error) {
         console.error(error);
@@ -176,8 +169,6 @@ export const getMyReviews = async (req, res) => {
  * @description Get all reviews in the system (Admin only).
  * @route GET /api/reviews/all
  * @access Private/Admin
- * @param {import('express').Request} req - Express request object.
- * @param {import('express').Response} res - Express response object.
  */
 export const getAllReviews = async (req, res) => {
     try {
@@ -185,7 +176,6 @@ export const getAllReviews = async (req, res) => {
         const limit = parseInt(req.query.limit, 10) || 10;
         const skip = (page - 1) * limit;
 
-        // Fetching all reviews with user and service details populated
         const reviews = await Review.find({})
             .populate('user', 'name email') 
             .populate('service', 'name')     
@@ -212,21 +202,18 @@ export const getAllReviews = async (req, res) => {
 }
 
 /**
- * @description Delete a review by its ID.
+ * @description Delete a review by its ID (Admin only).
  * @route DELETE /api/reviews/:id
- * @access Private (Author or Admin)
- * @param {import('express').Request} req - Express request object.
- * @param {import('express').Response} res - Express response object.
+ * @access Private/Admin
  */
 export const deleteReviewById = async (req, res) => {
     try {
-        const review = await Review.findOneAndDelete(req.params.id);
+        // findByIdAndDelete is more idiomatic for this operation
+        const review = await Review.findByIdAndDelete(req.params.id);
        
-
         if (!review) {
             return res.status(404).json({ success: false, error: 'Review not found' });
         }
-
 
         res.status(200).json({ success: true, data: {} });
     } catch (error) {

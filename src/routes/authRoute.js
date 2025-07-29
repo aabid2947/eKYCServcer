@@ -9,20 +9,13 @@ import {
     googleSignIn,
     verifyEmailOtp,
     forgotPassword,
-    resetPassword,
-    updateUserProfile
+    resetPassword
 } from '../controllers/authController.js';
 
 const router = express.Router();
 
 
-router.put(
-    '/profile',
-    [
-        check('name', 'Name is required').not().isEmpty(),
-    ],
-    updateUserProfile
-);
+
 
 router.post(
     '/verify-email-otp',

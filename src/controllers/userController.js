@@ -1,6 +1,7 @@
 // controllers/userController.js
 import User from "../models/UserModel.js";
 import sendEmail from "../utils/sendEmail.js";
+import { validationResult } from 'express-validator';
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
@@ -164,5 +165,53 @@ export const sendSubscriptionReminder = async (req, res, next) => {
 
     } catch (error) {
         next(error);
+    }
+};
+
+
+
+export const updateUserProfile = async (req, res) => {
+    const errors = validationResult(req);
+    const userId = req.user ? req.user._id : null;
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Not authorized, no user ID provided.' });
+        }
+
+        const { name, email } = req.body;
+
+        // Find user and update
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        // Update fields if provided
+        if (name) user.name = name;
+        if (email) user.email = email;
+
+        // Save the updated user
+        const updatedUser = await user.save();
+
+        // Return updated user data
+        res.status(200).json({
+            success: true,
+            data: {
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isVerified: updatedUser.isVerified,
+                promotedCategories: updatedUser.promotedCategories
+            }
+        });
+
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
     }
 };

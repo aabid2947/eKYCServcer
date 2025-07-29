@@ -4,14 +4,26 @@ import {
     getAllUsers, 
     promoteUserCategory,
     demoteUserCategory,
-    sendSubscriptionReminder
+    sendSubscriptionReminder,
+    updateUserProfile
+
 } from '../controllers/userController.js';
+import { check } from 'express-validator';
 import { protect ,authorize} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // User's own profile
 router.get('/profile', protect, getUserProfile);
+
+router.put(
+    '/profile',
+    [
+        check('name', 'Name is required').not().isEmpty(),
+    ],
+    protect,
+    updateUserProfile
+);
 
 // Admin routes for user management
 router.route('/all').get( getAllUsers);

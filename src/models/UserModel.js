@@ -28,6 +28,10 @@ const UsedServiceSchema = new mongoose.Schema({
     ref: 'Service',
     required: true,
   },
+  serviceName: {
+    type: String,
+    required: true,
+  },
   usageCount: {
     type: Number,
     required: true,
