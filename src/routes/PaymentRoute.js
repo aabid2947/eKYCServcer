@@ -1,5 +1,5 @@
 import express from 'express';
-import { createPaymentOrder, verifyPaymentAndExecuteService } from '../controllers/PaymentController.js';
+import { createSubscriptionOrder, verifySubscriptionPayment } from '../controllers/PaymentController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import multer from 'multer';
 
@@ -15,7 +15,7 @@ const upload = multer({ storage: storage });
  * @desc    Creates a Razorpay order before payment.
  * @access  Private
  */
-router.route('/order').post(protect, createPaymentOrder);
+router.route('/order').post(protect, createSubscriptionOrder);
 
 /**
  * @route   POST /api/payment/verify
@@ -23,6 +23,6 @@ router.route('/order').post(protect, createPaymentOrder);
  * Uses `upload.any()` to handle potential file uploads (multipart/form-data).
  * @access  Private
  */
-router.route('/verify').post(protect, upload.any(), verifyPaymentAndExecuteService);
+router.route('/verify').post(protect, upload.any(), verifySubscriptionPayment);
 
 export default router;

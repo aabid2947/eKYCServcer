@@ -7,15 +7,19 @@ import adminRoutes from './adminRoute.js';
 import transactionRoutes from './transactionRoute.js'
 import { reviewRouter, serviceReviewRoutes } from './reviewRoute.js';
 import paymentRoutes from './PaymentRoute.js';
+import couponRoutes from './couponRoute.js'; // <-- IMPORT NEW ROUTE
+
 const router = express.Router();
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 
-
 // For fetching the list of available services
 router.use('/services', serviceRoutes);
+
+// For managing coupons
+router.use('/coupons', couponRoutes); // <-- USE NEW ROUTE
 
 //For transaction 
 router.use('/transactions', transactionRoutes)

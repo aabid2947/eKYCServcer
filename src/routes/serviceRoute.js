@@ -6,6 +6,7 @@ import {
   updateServiceById,
   deleteServiceById,
   deleteAllServices,
+   manualUpdate,
 } from '../controllers/serviceController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js'; // Updated imports
 
@@ -25,6 +26,8 @@ router
 
   
 router.route('/deleteAll').delete(protect, authorize('admin'), deleteAllServices);
+// router.route('/admin/manual-update').put( manualUpdate);
+
 
 
 export default router;

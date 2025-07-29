@@ -2,6 +2,26 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
+const SubscriptionSchema = new mongoose.Schema({
+  category: {
+    type: String,
+    required: true,
+  },
+  plan: {
+    type: String,
+    required: true,
+    enum: ['monthly', 'yearly'],
+  },
+  purchasedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  expiresAt: {
+    type: Date,
+    required: true,
+  }
+}, { _id: false });
+
 const UsedServiceSchema = new mongoose.Schema({
   service: {
     type: mongoose.Schema.Types.ObjectId,
@@ -13,7 +33,7 @@ const UsedServiceSchema = new mongoose.Schema({
     required: true,
     default: 0,
   },
-}, {_id: false});
+}, { _id: false });
 
 const UserSchema = new mongoose.Schema(
   {
@@ -31,14 +51,14 @@ const UserSchema = new mongoose.Schema(
       ],
     },
     mobile: {
-        type: String,
-        unique: true,
-        sparse: true,
+      type: String,
+      unique: true,
+      sparse: true,
     },
     googleId: {
-        type: String,
-        unique: true,
-        sparse: true,
+      type: String,
+      unique: true,
+      sparse: true,
     },
     password: {
       type: String,
@@ -54,6 +74,14 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    promotedCategories: {
+      type: [String], // e.g., ["PAN_VERIFICATION", "BANK_VERIFICATION"]
+      default: [],
+    },
+    activeSubscriptions: {
+      type: [SubscriptionSchema],
+      default: [],
+    },
     emailOtp: String,
     emailOtpExpires: Date,
     mobileOtp: String,
@@ -66,21 +94,21 @@ const UserSchema = new mongoose.Schema(
 );
 
 // Middleware to ensure either email or mobile is provided
-UserSchema.pre('save', function(next) {
-    if (this.googleId) return next();
-    if (!this.email && !this.mobile) {
-        return next(new Error('Either email or mobile number is required.'));
-    }
-    next();
+UserSchema.pre('save', function (next) {
+  if (this.googleId) return next();
+  if (!this.email && !this.mobile) {
+    return next(new Error('Either email or mobile number is required.'));
+  }
+  next();
 });
 
 // Middleware to ensure password is provided for standard email registration
-UserSchema.pre('save', function(next) {
-    if (this.googleId || this.isModified('password')) return next();
-    if (this.email && !this.password && this.isNew) {
-        return next(new Error('Password is required for email registration.'));
-    }
-    next();
+UserSchema.pre('save', function (next) {
+  if (this.googleId || this.isModified('password')) return next();
+  if (this.email && !this.password && this.isNew) {
+    return next(new Error('Password is required for email registration.'));
+  }
+  next();
 });
 
 // Encrypt password before saving
@@ -108,10 +136,10 @@ UserSchema.methods.getEmailOtp = function () {
 
 // Generate and set mobile verification OTP
 UserSchema.methods.getMobileOtp = function () {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    this.mobileOtp = otp;
-    this.mobileOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-    return otp;
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  this.mobileOtp = otp;
+  this.mobileOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return otp;
 };
 
 // Generate and hash password reset token

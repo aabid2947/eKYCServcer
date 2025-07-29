@@ -1,54 +1,10 @@
+// controllers/transactionController.js
 import Transaction from '../models/TransactionModel.js';
-
-/**
- * NOTE: This controller uses manual try-catch blocks to handle asynchronous errors.
- * Errors are passed to the global error handler middleware using `next(error)`.
- */
-
-/**
- * @desc    Create a new transaction
- * @route   POST /api/transactions
- * @access  Private
- * @param   {object} req - Express request object, expects req.user and req.body
- * @param   {object} res - Express response object
- * @param   {function} next - Express next middleware function
- * @body    { serviceId: string, quantity?: number, metadata?: object }
- * @returns { success: boolean, data: Transaction }
- */
-export const createTransaction = async (req, res, next) => {
-  try {
-    const { serviceId, quantity, metadata } = req.body;
-
-    if (!serviceId) {
-      res.status(400);
-      // This error will be caught by the catch block below
-      throw new Error('Service ID is required');
-    }
-
-    const transaction = await Transaction.create({
-      user: req.user.id, // Comes from 'protect' middleware
-      service: serviceId,
-      quantity,
-      metadata,
-      status: 'completed',
-    });
-
-    res.status(201).json({ success: true, data: transaction });
-  } catch (error) {
-    // Pass any caught errors to the global error handler
-    next(error);
-  }
-};
 
 /**
  * @desc    Get transactions for the logged-in user (paginated)
  * @route   GET /api/transactions/me
  * @access  Private
- * @param   {object} req - Express request object, expects req.user and req.query
- * @param   {object} res - Express response object
- * @param   {function} next - Express next middleware function
- * @query   { page?: number, limit?: number }
- * @returns { success: boolean, count: number, pagination: object, data: Transaction[] }
  */
 export const getUserTransactions = async (req, res, next) => {
   try {
@@ -57,23 +13,18 @@ export const getUserTransactions = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const total = await Transaction.countDocuments({ user: req.user.id });
+    
+    // The transaction now directly contains the category name.
     const transactions = await Transaction.find({ user: req.user.id })
-      .populate('service', 'name price')
       .populate('user', 'name email')    
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
     res.status(200).json({
       success: true,
       count: transactions.length,
-      pagination: {
-        total,
-        page,
-        limit,
-        next: skip + limit < total ? page + 1 : null,
-        prev: page > 1 ? page - 1 : null,
-      },
+      pagination: { total, page, limit },
       data: transactions,
     });
   } catch (error) {
@@ -83,19 +34,14 @@ export const getUserTransactions = async (req, res, next) => {
 
 /**
  * @desc    Get all transactions (admin only)
- * @route   GET /api/admin/transactions
+ * @route   GET /api/transactions/admin/all
  * @access  Private/Admin
- * @param   {object} req - Express request object
- * @param   {object} res - Express response object
- * @param   {function} next - Express next middleware function
- * @returns { success: boolean, data: Transaction[] }
  */
 export const getAllTransactions = async (req, res, next) => {
   try {
-    // Advanced filtering could be added here from req.query
     const transactions = await Transaction.find({})
       .populate('user', 'name email')
-      .populate('service', 'name price');
+      .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: transactions.length, data: transactions });
   } catch (error) {
@@ -104,45 +50,33 @@ export const getAllTransactions = async (req, res, next) => {
 };
 
 /**
- * @desc    Get aggregated service usage statistics (admin only)
- * @route   GET /api/admin/transactions/stats
+ * @desc    Get aggregated category purchase statistics (admin only)
+ * @route   GET /api/transactions/admin/stats
  * @access  Private/Admin
- * @param   {object} req - Express request object
- * @param   {object} res - Express response object
- * @param   {function} next - Express next middleware function
- * @returns { success: boolean, data: object[] }
  */
 export const getServiceUsageStats = async (req, res, next) => {
   try {
     const stats = await Transaction.aggregate([
       {
+        $match: { status: 'completed' } // Only count successful purchases
+      },
+      {
         $group: {
-          _id: '$service', // Group by service ID
-          usageCount: { $sum: '$quantity' }, // Sum the quantity for each service
+          _id: '$category', // Group by category name
+          purchaseCount: { $sum: 1 },
+          totalRevenue: { $sum: '$amount' }
         },
-      },
-      {
-        $lookup: {
-          from: 'services', // The actual collection name for the Service model
-          localField: '_id',
-          foreignField: '_id',
-          as: 'serviceDetails',
-        },
-      },
-      {
-        $unwind: '$serviceDetails',
       },
       {
         $project: {
           _id: 0,
-          serviceId: '$_id',
-          serviceName: '$serviceDetails.name',
-          serviceKey: '$serviceDetails.service_key',
-          totalUsage: '$usageCount',
+          category: '$_id',
+          purchaseCount: '$purchaseCount',
+          totalRevenue: '$totalRevenue',
         },
       },
       {
-        $sort: { totalUsage: -1 },
+        $sort: { totalRevenue: -1 },
       },
     ]);
 
@@ -150,4 +84,10 @@ export const getServiceUsageStats = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// This function is likely deprecated as transactions are now created during payment.
+// It's kept here for reference but should not be actively used in the subscription flow.
+export const createTransaction = async (req, res, next) => {
+    res.status(400).json({ success: false, message: 'This endpoint is deprecated. Transactions are created via the payment flow.' });
 };

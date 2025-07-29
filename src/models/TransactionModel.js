@@ -6,7 +6,10 @@ import mongoose from 'mongoose';
  * @property {mongoose.Schema.Types.ObjectId} service - The service that was used.
  * @property {String} status - The outcome of the transaction ('pending', 'completed', 'failed').
  * @property {Number} quantity - The number of units consumed (default is 1).
- * @property {Number} amount - The amount charged for the transaction.
+ * @property {Number} amount - The FINAL amount charged for the transaction after discounts.
+ * @property {Number} originalAmount - The original price of the service before discounts.
+ * @property {Number} discountApplied - The monetary value of the discount.
+ * @property {String} couponCode - The coupon code used for the discount.
  * @property {String} razorpay_order_id - The order ID from Razorpay.
  * @property {String} razorpay_payment_id - The payment ID from Razorpay after successful payment.
  * @property {String} razorpay_signature - The signature from Razorpay to verify authenticity.
@@ -20,26 +23,38 @@ const TransactionSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    service: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Service',
-      required: true,
-    },
+    category: { type: String, required: true },
+    plan: { type: String, required: true, enum: ['monthly', 'yearly'] },
     status: {
       type: String,
       required: true,
       enum: ['pending', 'completed', 'failed'],
       default: 'pending',
     },
-    quantity: {
-      type: Number,
-      default: 1,
-    },
+    // quantity: {
+    //   type: Number,
+    //   default: 1,
+    // },
     amount: {
       type: Number,
-      required: false, // Not required for free services
+      required: false, // Final amount charged
     },
-    // --- Razorpay Payment Details ---
+
+    originalAmount: {
+      type: Number,
+      required: false,
+    },
+    discountApplied: {
+      type: Number,
+      default: 0
+    },
+    couponCode: {
+      type: String,
+      trim: true,
+      required: false
+    },
+
+
     razorpay_order_id: {
       type: String,
       required: false,

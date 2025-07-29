@@ -17,7 +17,9 @@ router
 
 router.route('/me').get(protect, getUserTransactions);
 
-router.route('/admin/all').get(protect, authorize('admin'), getAllTransactions);
+// router.route('/admin/all').get(protect, authorize('admin'), getAllTransactions);
+router.route('/admin/all').get( getAllTransactions);
+
 router.route('/admin/stats').get(protect, authorize('admin'), getServiceUsageStats);
 
 export default router;

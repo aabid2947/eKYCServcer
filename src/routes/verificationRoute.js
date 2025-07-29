@@ -1,14 +1,14 @@
 // routes/verificationRoute.js
 
 import express from 'express';
-import { handleVerificationRequest } from '../controllers/verificationController.js';
 import { protect } from '../middleware/authMiddleware.js'; 
-import { verificationLimiter } from '../middleware/rateLimiter.js';
+import { executeSubscribedService } from '../controllers/verificationController.js';
+import { checkSubscription } from '../middleware/SubscriptionMiddleware.js'; 
 
 const router = express.Router();
 
 router
   .route('/verify')
-  .post(verificationLimiter, protect, handleVerificationRequest);
+  .post(protect, checkSubscription, executeSubscribedService);
 
 export default router;

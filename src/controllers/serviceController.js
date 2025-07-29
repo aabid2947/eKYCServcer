@@ -136,3 +136,43 @@ export const deleteAllServices = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * @desc    Manually update all services to set a default combo price.
+ * @route   PUT /api/services/admin/manual-update
+ * @access  Private/Admin
+ */
+export const manualUpdate = async (req, res, next) => {
+  try {
+    // The update payload to be applied to all documents
+    const updatePayload = {
+      $set: {
+        combo_price: {
+          monthly: 299,
+          yearly: 2990,
+        },
+      },
+    };
+
+    // Use updateMany to apply the change to all documents in the Service collection
+    // The empty filter {} selects all documents
+    const result = await Service.updateMany({}, updatePayload);
+
+    if (result.modifiedCount === 0 && result.matchedCount > 0) {
+        return res.status(200).json({
+            success: true,
+            message: "All services already had the correct combo prices set. No documents were modified.",
+            data: result,
+        });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully updated combo prices for ${result.modifiedCount} services.`,
+      data: result,
+    });
+  } catch (error) {
+    // Pass any database errors to the error handling middleware
+    next(error);
+  }
+};
