@@ -1,3 +1,5 @@
+// routes/serviceRoute.js
+
 import express from 'express';
 import {
   getAllServices,
@@ -6,28 +8,30 @@ import {
   updateServiceById,
   deleteServiceById,
   deleteAllServices,
-   manualUpdate,
+  manualUpdate,
 } from '../controllers/serviceController.js';
-import { protect, authorize } from '../middleware/authMiddleware.js'; // Updated imports
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.route('/').get( getAllServices);
+// Public route to get all active services
+router.route('/').get(getAllServices);
 
-// Public route to get a single service
+// Admin route to create a new service
+router.route('/').post(protect, authorize('admin'), createService);
+
+// Public route to get a single service by its ID
 router.route('/:id').get(getServiceById);
 
-
-router.route('/create').post( createService);
+// Admin routes to update or delete a specific service by its ID
 router
   .route('/:id')
   .put(protect, authorize('admin'), updateServiceById)
   .delete(protect, authorize('admin'), deleteServiceById);
 
-  
+// Utility admin route to delete all services
 router.route('/deleteAll').delete(protect, authorize('admin'), deleteAllServices);
-// router.route('/admin/manual-update').put( manualUpdate);
-
-
+// Utility admin route for manual updates
+// router.route('/admin/manual-update').put(protect, authorize('admin'), manualUpdate);
 
 export default router;

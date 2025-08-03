@@ -1,74 +1,60 @@
 import { validationResult } from 'express-validator';
 import Review from '../models/ReviewModel.js';
 import Transaction from '../models/TransactionModel.js';
-// Service model is not directly needed for creation but good for context
-// import Service from '../models/Service.js';
-
+import Service from '../models/Service.js'
 
 /**
- * @description Create a new review for a transaction. The review can be general, for a service, or for a category.
+ * @description Create a new review.
  * @route POST /api/reviews
  * @access Private
  */
+
 export const createReview = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { transactionId, rating, comment, serviceId, category } = req.body;
+  const { rating, comment, serviceId } = req.body;
   const userId = req.user.id;
 
   try {
-    // 1. Verify the transaction exists, belongs to the user, and is completed
-    const transaction = await Transaction.findById(transactionId);
-    if (!transaction) {
-      return res.status(404).json({ success: false, error: 'Transaction not found.' });
-    }
-    if (transaction.user.toString() !== userId) {
-      return res.status(403).json({ success: false, error: 'This transaction does not belong to you.' });
-    }
-    if (transaction.status !== 'completed') {
-        return res.status(400).json({ success: false, error: 'Cannot review a transaction that was not completed.' });
+    // 1. Verify the service exists (this is a good practice to keep)
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      return res.status(404).json({ success: false, error: 'Service not found.' });
     }
 
-    // 2. Check if the user has already reviewed the specific service or category.
-    // The database index provides a robust final check, but this gives a clearer error message.
-    if (serviceId) {
-      const existingServiceReview = await Review.findOne({ user: userId, service: serviceId });
-      if (existingServiceReview) {
-        return res.status(400).json({ success: false, error: 'You have already submitted a review for this service.' });
-      }
-    } else if (category) {
-      const existingCategoryReview = await Review.findOne({ user: userId, category });
-      if (existingCategoryReview) {
-        return res.status(400).json({ success: false, error: 'You have already submitted a review for this category.' });
-      }
+    // 2. UPDATED: Check eligibility from the user's record, not the service's.
+    // This checks if the 'usedServices' array on the user object contains the service being reviewed.
+    const hasUsedService = req.user.usedServices?.some(
+      (usedService) => usedService.service.toString() === serviceId
+    );
+
+    if (!hasUsedService) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only review services you have used.',
+      });
     }
 
-    // 3. Prepare review data
-    const reviewData = {
-      transaction: transactionId,
+    // 3. Create the review
+    const review = await Review.create({
       user: userId,
+      service: serviceId,
       rating,
       comment,
-    };
-
-    if (serviceId) {
-      reviewData.service = serviceId;
-    } else if (category) {
-      reviewData.category = category;
-    }
-
-    // 4. Create and save the new review
-    const review = await Review.create(reviewData);
+    });
 
     res.status(201).json({ success: true, data: review });
   } catch (error) {
     console.error(error);
-    // This will catch duplicate key errors from any of the unique indexes
+    // Handle case where user has already reviewed this service (unique index violation)
     if (error.code === 11000) {
-        return res.status(400).json({ success: false, error: 'A review for this transaction or item has already been submitted.' });
+      return res.status(400).json({
+        success: false,
+        error: 'You have already submitted a review for this service.',
+      });
     }
     res.status(500).json({ success: false, error: 'Server Error' });
   }
@@ -201,19 +187,26 @@ export const getAllReviews = async (req, res) => {
     }
 }
 
+
 /**
- * @description Delete a review by its ID (Admin only).
+ * @description Delete a review by its ID (Admin or Author).
  * @route DELETE /api/reviews/:id
- * @access Private/Admin
+ * @access Private
  */
 export const deleteReviewById = async (req, res) => {
     try {
-        // findByIdAndDelete is more idiomatic for this operation
-        const review = await Review.findByIdAndDelete(req.params.id);
+        const review = await Review.findById(req.params.id);
        
         if (!review) {
             return res.status(404).json({ success: false, error: 'Review not found' });
         }
+
+        // Check if user is the author or an admin
+        if (review.user.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, error: 'Not authorized to delete this review' });
+        }
+
+        await review.deleteOne(); // Use deleteOne or remove, findByIdAndDelete is also fine.
 
         res.status(200).json({ success: true, data: {} });
     } catch (error) {

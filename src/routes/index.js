@@ -5,9 +5,9 @@ import serviceRoutes from './serviceRoute.js';
 import verificationRoutes from './verificationRoute.js';
 import adminRoutes from './adminRoute.js';
 import transactionRoutes from './transactionRoute.js'
-import { reviewRouter, serviceReviewRoutes } from './reviewRoute.js';
+import  reviewRouter  from './reviewRoute.js';
 import paymentRoutes from './PaymentRoute.js';
-import couponRoutes from './couponRoute.js'; // <-- IMPORT NEW ROUTE
+import couponRoutes from './couponRoute.js'; 
 
 const router = express.Router();
 

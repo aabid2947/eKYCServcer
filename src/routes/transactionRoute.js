@@ -1,25 +1,28 @@
-
+// routes/transactionRoute.js
 
 import express from 'express';
 import {
-  createTransaction,
   getUserTransactions,
   getAllTransactions,
   getServiceUsageStats,
+  getUserServiceUsage, // Import the new controller function
 } from '../controllers/transactionController.js';
-import { protect, authorize } from '../middleware/authMiddleware.js'; // Updated imports
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router
-  .route('/')
-  .post(protect, createTransaction);
-
+// Get transactions for the currently logged-in user
 router.route('/me').get(protect, getUserTransactions);
 
-// router.route('/admin/all').get(protect, authorize('admin'), getAllTransactions);
-router.route('/admin/all').get( getAllTransactions);
+// Get a user's service usage stats (for admins or the user themselves)
+router.route('/usage').get(protect, getUserServiceUsage);
 
+// --- Admin Routes ---
+
+// Get all transactions in the system
+router.route('/admin/all').get(protect, authorize('admin'), getAllTransactions);
+
+// Get revenue statistics for subscription sales
 router.route('/admin/stats').get(protect, authorize('admin'), getServiceUsageStats);
 
 export default router;

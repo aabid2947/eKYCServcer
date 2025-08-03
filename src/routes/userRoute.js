@@ -5,7 +5,11 @@ import {
     promoteUserCategory,
     demoteUserCategory,
     sendSubscriptionReminder,
-    updateUserProfile
+    updateUserProfile,
+    // --- IMPORT THE NEW CONTROLLER ---
+    getUserById,
+    extendSubscription,
+    revokeSubscription
 
 } from '../controllers/userController.js';
 import { check } from 'express-validator';
@@ -25,13 +29,25 @@ router.put(
     updateUserProfile
 );
 
-// Admin routes for user management
-router.route('/all').get( getAllUsers);
 
-// Admin routes for managing user promotions
+// --- ADMIN ROUTES ---
+
+// General user management
+router.route('/all').get(protect, authorize('admin'), getAllUsers);
+router.route('/:userId/send-reminder').post(protect, authorize('admin'), sendSubscriptionReminder);
+
+// --- NEW ROUTE TO GET A SINGLE USER BY ID (FOR ADMIN) ---
+router.route('/:userId').get(protect, authorize('admin'), getUserById);
+// --- END NEW ROUTE ---
+
+// Manage promotional categories
 router.route('/:userId/promote').post(protect, authorize('admin'), promoteUserCategory);
 router.route('/:userId/demote').post(protect, authorize('admin'), demoteUserCategory);
 
-router.route('/:userId/send-reminder').post(protect, sendSubscriptionReminder);
+
+// NEW ADMIN ROUTES FOR SUBSCRIPTION MANAGEMENT
+router.route('/admin/extend-subscription').post(protect, authorize('admin'), extendSubscription);
+router.route('/admin/revoke-subscription').post(protect, authorize('admin'), revokeSubscription);
+
 
 export default router;

@@ -1,5 +1,6 @@
 // controllers/transactionController.js
 import Transaction from '../models/TransactionModel.js';
+import User from '../models/UserModel.js'; // Import the User model for the new function
 
 /**
  * @desc    Get transactions for the logged-in user (paginated)
@@ -14,7 +15,6 @@ export const getUserTransactions = async (req, res, next) => {
 
     const total = await Transaction.countDocuments({ user: req.user.id });
     
-    // The transaction now directly contains the category name.
     const transactions = await Transaction.find({ user: req.user.id })
       .populate('user', 'name email')    
       .sort({ createdAt: -1 })
@@ -44,13 +44,14 @@ export const getAllTransactions = async (req, res, next) => {
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: transactions.length, data: transactions });
-  } catch (error) {
+  } catch (error)
+ {
     next(error);
   }
 };
 
 /**
- * @desc    Get aggregated category purchase statistics (admin only)
+ * @desc    Get aggregated category purchase REVENUE statistics (admin only)
  * @route   GET /api/transactions/admin/stats
  * @access  Private/Admin
  */
@@ -86,8 +87,32 @@ export const getServiceUsageStats = async (req, res, next) => {
   }
 };
 
-// This function is likely deprecated as transactions are now created during payment.
-// It's kept here for reference but should not be actively used in the subscription flow.
-export const createTransaction = async (req, res, next) => {
-    res.status(400).json({ success: false, message: 'This endpoint is deprecated. Transactions are created via the payment flow.' });
+/**
+ * @desc    Get a user's individual service USAGE counts from their profile
+ * @route   GET /api/transactions/usage
+ * @access  Private
+ */
+export const getUserServiceUsage = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id).select('usedServices activeSubscriptions');
+
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found');
+        }
+
+        // We can also enrich this data with the user's current subscription limits
+        const usageData = {
+            servicesUsed: user.usedServices,
+            subscriptionStatus: user.activeSubscriptions,
+        };
+
+        res.status(200).json({
+            success: true,
+            data: usageData,
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };

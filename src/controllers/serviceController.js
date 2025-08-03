@@ -7,7 +7,6 @@ import Service from '../models/Service.js';
 // @access  Public
 export const getAllServices = async (req, res, next) => {
   try {
-    // Only find services that are marked as active
     const services = await Service.find({ is_active: true });
     res.status(200).json({
       success: true,
@@ -47,18 +46,14 @@ export const getServiceById = async (req, res, next) => {
 export const createService = async (req, res, next) => {
   try {
     const serviceData = req.body;
-    console.log('Creating service:', serviceData);
-
-    // 1. Validate the input
+    
     if (!serviceData || typeof serviceData !== 'object' || Array.isArray(serviceData)) {
       res.status(400);
       throw new Error('Request body must be a valid service object.');
     }
 
-    // 2. Create the service using Mongoose
     const createdService = await Service.create(serviceData);
 
-    // 3. Send a success response
     res.status(201).json({
       success: true,
       message: 'Service created successfully',
@@ -76,14 +71,30 @@ export const createService = async (req, res, next) => {
 export const updateServiceById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, service_key, description, endpoint, price, category, is_active } = req.body.changes;
-    const updateData = { name, service_key, description, endpoint, price, category, is_active };
-   
+    // Destructure all possible fields, including combo_price
+    const { name, service_key, description, endpoint, price, combo_price, category, is_active } = req.body.changes;
     
-    const updated = await Service.findByIdAndUpdate(id, updateData, {
+    // Construct the update object dynamically to only include provided fields
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (service_key) updateData.service_key = service_key;
+    if (description) updateData.description = description;
+    if (endpoint) updateData.endpoint = endpoint;
+    if (price) updateData.price = price;
+    if (category) updateData.category = category;
+    if (is_active !== undefined) updateData.is_active = is_active;
+
+    // Specifically handle the nested combo_price object
+    if (combo_price) {
+        if (combo_price.monthly) updateData['combo_price.monthly'] = combo_price.monthly;
+        if (combo_price.yearly) updateData['combo_price.yearly'] = combo_price.yearly;
+    }
+   
+    const updated = await Service.findByIdAndUpdate(id, { $set: updateData }, {
       new: true,
       runValidators: true,
     });
+
     if (!updated) {
       res.status(404);
       throw new Error('Service not found with that ID');
@@ -104,8 +115,7 @@ export const updateServiceById = async (req, res, next) => {
 // @access  Private (Admin Only)
 export const deleteServiceById = async (req, res, next) => {
   try {
-    const key = req.params.id; 
-    const service = await Service.findOneAndDelete({ service_key: key });
+    const service = await Service.findByIdAndDelete(req.params.id); 
 
     if (!service) {
       res.status(404);
@@ -123,16 +133,12 @@ export const deleteServiceById = async (req, res, next) => {
 
 export const deleteAllServices = async (req, res, next) => {
   try {
-    // deleteMany with no filter wipes the entire collection
     const result = await Service.deleteMany({});
-    
-    // result.deletedCount is the number of docs removed
     res.status(200).json({
       message: 'All services deleted successfully',
       deletedCount: result.deletedCount
     });
   } catch (err) {
-    // let your error-handling middleware pick this up
     next(err);
   }
 };
@@ -144,7 +150,6 @@ export const deleteAllServices = async (req, res, next) => {
  */
 export const manualUpdate = async (req, res, next) => {
   try {
-    // The update payload to be applied to all documents
     const updatePayload = {
       $set: {
         combo_price: {
@@ -154,8 +159,6 @@ export const manualUpdate = async (req, res, next) => {
       },
     };
 
-    // Use updateMany to apply the change to all documents in the Service collection
-    // The empty filter {} selects all documents
     const result = await Service.updateMany({}, updatePayload);
 
     if (result.modifiedCount === 0 && result.matchedCount > 0) {
@@ -172,7 +175,6 @@ export const manualUpdate = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    // Pass any database errors to the error handling middleware
     next(error);
   }
 };

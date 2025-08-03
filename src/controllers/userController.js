@@ -2,20 +2,24 @@
 import User from "../models/UserModel.js";
 import sendEmail from "../utils/sendEmail.js";
 import { validationResult } from 'express-validator';
-// @desc    Get user profile
+
+// @desc    Get user profile (current logged-in user)
 // @route   GET /api/users/profile
 // @access  Private
 export const getUserProfile = async (req, res, next) => {
-  // req.user is attached from authMiddleware.protect
   const user = await User.findById(req.user.id);
-
   if (user) {
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       isVerified: user.isVerified,
-      promotedCategories: user.promotedCategories, 
+      promotedCategories: user.promotedCategories,
+      activeSubscriptions: user.activeSubscriptions,
+      usedServices: user.usedServices,
+      role: user.role,
+      createdAt: user.createdAt,
+      password: !!user.password // Send a boolean indicating if a password is set
     });
   } else {
     res.status(404);
@@ -35,9 +39,91 @@ export const getAllUsers = async (req, res, next) => {
   }
 };
 
-// @desc    Promote a user to a free service category (Admin)
-// @route   POST /api/users/:userId/promote
+// @desc    Get a single user by ID (Admin)
+// @route   GET /api/users/:userId
 // @access  Private/Admin
+export const getUserById = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.userId).select('-password'); // Exclude password hash
+
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found.');
+        }
+
+        // Return the full user object, including subscriptions, used services, etc.
+        res.status(200).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            mobile: user.mobile, // Include mobile if exists
+            isVerified: user.isVerified,
+            promotedCategories: user.promotedCategories,
+            activeSubscriptions: user.activeSubscriptions,
+            usedServices: user.usedServices,
+            role: user.role,
+            createdAt: user.createdAt,
+            password: !!user.password, // Indicate if a password is set (for Google sign-in users)
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// @desc    Update user profile (current logged-in user)
+// @route   PUT /api/users/profile
+// @access  Private
+export const updateUserProfile = async (req, res) => {
+    const errors = validationResult(req);
+    const userId = req.user ? req.user._id : null;
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Not authorized, no user ID provided.' });
+        }
+
+        const { name, email } = req.body;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        if (name) user.name = name;
+        if (email) user.email = email;
+
+        const updatedUser = await user.save();
+
+        res.status(200).json({
+            success: true,
+            data: {
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isVerified: updatedUser.isVerified,
+                promotedCategories: updatedUser.promotedCategories,
+                activeSubscriptions: updatedUser.activeSubscriptions, // Ensure this is returned
+                usedServices: updatedUser.usedServices,
+                role: updatedUser.role,
+                createdAt: updatedUser.createdAt,
+                password: !!updatedUser.password // Boolean for password status
+            }
+        });
+
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+
+// @desc    Promote/Demote users
 export const promoteUserCategory = async (req, res, next) => {
     try {
         const { category } = req.body;
@@ -48,7 +134,7 @@ export const promoteUserCategory = async (req, res, next) => {
 
         const user = await User.findByIdAndUpdate(
             req.params.userId,
-            { $addToSet: { promotedCategories: category } }, // $addToSet prevents duplicates
+            { $addToSet: { promotedCategories: category } },
             { new: true, runValidators: true }
         );
 
@@ -68,9 +154,6 @@ export const promoteUserCategory = async (req, res, next) => {
     }
 };
 
-// @desc    Demote a user from a free service category (Admin)
-// @route   POST /api/users/:userId/demote
-// @access  Private/Admin
 export const demoteUserCategory = async (req, res, next) => {
     try {
         const { category } = req.body;
@@ -81,7 +164,7 @@ export const demoteUserCategory = async (req, res, next) => {
 
         const user = await User.findByIdAndUpdate(
             req.params.userId,
-            { $pull: { promotedCategories: category } }, // $pull removes the item
+            { $pull: { promotedCategories: category } },
             { new: true }
         );
 
@@ -101,11 +184,6 @@ export const demoteUserCategory = async (req, res, next) => {
     }
 };
 
-/**
- * @desc    Send a subscription expiry reminder to a specific user
- * @route   POST /api/users/:userId/send-reminder
- * @access  Private/Admin
- */
 export const sendSubscriptionReminder = async (req, res, next) => {
     try {
         const user = await User.findById(req.params.userId);
@@ -115,39 +193,33 @@ export const sendSubscriptionReminder = async (req, res, next) => {
             throw new Error('User not found.');
         }
 
-        // Check if the user has any active subscriptions
         if (!user.activeSubscriptions || user.activeSubscriptions.length === 0) {
             res.status(400);
             throw new Error('This user does not have any active subscriptions.');
         }
 
-        // Find the subscription that will expire next
         const sortedSubscriptions = user.activeSubscriptions.sort(
             (a, b) => a.expiresAt - b.expiresAt
         );
         const nextExpiringSub = sortedSubscriptions[0];
         
         const now = new Date();
-        // Check if the subscription has already expired
         if (nextExpiringSub.expiresAt < now) {
              res.status(400);
              throw new Error(`This user's subscription for "${nextExpiringSub.category}" already expired on ${nextExpiringSub.expiresAt.toDateString()}.`);
         }
 
-        // Calculate the number of days remaining
         const expiresInDays = Math.ceil((nextExpiringSub.expiresAt - now) / (1000 * 60 * 60 * 24));
 
-        // Prepare and send the email
         const subject = `Your Subscription for "${nextExpiringSub.category}" is Expiring Soon!`;
-        
         const text = `Hi ${user.name},\n\n` +
-                     `This is a friendly reminder that your ${nextExpiringSub.plan} subscription for the "${nextExpiringSub.category}" category is set to expire in ${expiresInDays} day(s) on ${nextExpiringSub.expiresAt.toDateString()}.\n\n` +
+                     `This is a friendly reminder that your ${nextExpiringSub.planType} subscription for the "${nextExpiringSub.category}" category is set to expire in ${expiresInDays} day(s) on ${nextExpiringSub.expiresAt.toDateString()}.\n\n` +
                      `To ensure uninterrupted access to our services, please renew your subscription at your earliest convenience.\n\n` +
                      `Thank you for being a valued member!\n` +
                      `The Team`;
 
         const html = `<p>Hi ${user.name},</p>` +
-                     `<p>This is a friendly reminder that your <strong>${nextExpiringSub.plan}</strong> subscription for the <strong>"${nextExpiringSub.category}"</strong> category is set to expire in <strong>${expiresInDays} day(s)</strong> on ${nextExpiringSub.expiresAt.toDateString()}.</p>` +
+                     `<p>This is a friendly reminder that your <strong>${nextExpiringSub.planType}</strong> subscription for the <strong>"${nextExpiringSub.category}"</strong> category is set to expire in <strong>${expiresInDays} day(s)</strong> on ${nextExpiringSub.expiresAt.toDateString()}.</p>` +
                      `<p>To ensure uninterrupted access to our services, please renew your subscription at your earliest convenience.</p>` +
                      `<p>Thank you for being a valued member!<br>The Team</p>`;
         
@@ -168,50 +240,107 @@ export const sendSubscriptionReminder = async (req, res, next) => {
     }
 };
 
-
-
-export const updateUserProfile = async (req, res) => {
-    const errors = validationResult(req);
-    const userId = req.user ? req.user._id : null;
-
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
+/**
+ * @desc    Extend a user's subscription (Admin)
+ * @route   POST /api/users/admin/extend-subscription
+ * @access  Private/Admin
+ */
+export const extendSubscription = async (req, res, next) => {
     try {
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'Not authorized, no user ID provided.' });
+        const { userId, category, duration } = req.body;
+
+        if (!userId || !category || !duration || typeof duration.value !== 'number' || !['months', 'days', 'years'].includes(duration.unit)) {
+            res.status(400);
+            throw new Error('User ID, category, and valid duration (value, unit) are required.');
         }
 
-        const { name, email } = req.body;
-
-        // Find user and update
         const user = await User.findById(userId);
-
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
+            res.status(404);
+            throw new Error('User not found.');
         }
 
-        // Update fields if provided
-        if (name) user.name = name;
-        if (email) user.email = email;
+        const subIndex = user.activeSubscriptions.findIndex(s => s.category === category);
+        if (subIndex === -1) {
+            res.status(404);
+            throw new Error('User does not have an active paid subscription for this category.');
+        }
 
-        // Save the updated user
-        const updatedUser = await user.save();
+        const currentExpiry = user.activeSubscriptions[subIndex].expiresAt;
+        const newExpiry = new Date(currentExpiry);
 
-        // Return updated user data
+        if (duration.unit === 'months') {
+            newExpiry.setMonth(newExpiry.getMonth() + duration.value);
+        } else if (duration.unit === 'days') {
+            newExpiry.setDate(newExpiry.getDate() + duration.value);
+        } else if (duration.unit === 'years') {
+            newExpiry.setFullYear(newExpiry.getFullYear() + duration.value);
+        } else {
+            res.status(400);
+            throw new Error('Invalid duration unit specified. Must be "months", "days", or "years".');
+        }
+        // Ensure the new expiry date is not in the past
+        if (newExpiry < currentExpiry) {
+             res.status(400);
+             throw new Error('New expiry date cannot be earlier than current expiry date. Ensure the extension duration is positive.');
+        }
+
+
+        user.activeSubscriptions[subIndex].expiresAt = newExpiry;
+        await user.save();
+
         res.status(200).json({
             success: true,
+            message: `Subscription for ${category} extended successfully. New expiry: ${newExpiry.toDateString()}`,
+            data: user.activeSubscriptions,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Revoke a user's subscription or promotion (Admin)
+ * @route   POST /api/users/admin/revoke-subscription
+ * @access  Private/Admin
+ */
+export const revokeSubscription = async (req, res, next) => {
+    try {
+        const { userId, category } = req.body;
+
+        if (!userId || !category) {
+            res.status(400);
+            throw new Error('User ID and category are required.');
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found');
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                $pull: {
+                    activeSubscriptions: { category: category }, // Pull from paid subscriptions
+                    promotedCategories: category,                // Pull from promotional categories
+                },
+            },
+            { new: true } // Return the updated document
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `All access for category "${category}" has been revoked for user ${updatedUser.name}.`,
             data: {
-                _id: updatedUser._id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                isVerified: updatedUser.isVerified,
-                promotedCategories: updatedUser.promotedCategories
+                activeSubscriptions: updatedUser.activeSubscriptions,
+                promotedCategories: updatedUser.promotedCategories,
             }
         });
 
     } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+        next(error);
     }
 };

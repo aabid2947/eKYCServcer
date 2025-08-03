@@ -1,16 +1,31 @@
+// models/UserModel.js
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 const SubscriptionSchema = new mongoose.Schema({
-  category: {
+  category: { // The category this subscription unlocks, e.g., "Professional"
     type: String,
     required: true,
   },
-  plan: {
+  planType: { 
     type: String,
     required: true,
     enum: ['monthly', 'yearly'],
+  },
+  razorpaySubscriptionId: { // To track the subscription in your payment gateway
+    type: String,
+    unique: true,
+    sparse: true, // Allows multiple null values but unique if present
+  },
+  usageLimit: { // The number of verifications included in the plan
+    type: Number,
+    required: true,
+  },
+  usageCount: { // Starts at 0 and increments with each use
+    type: Number,
+    default: 0,
   },
   purchasedAt: {
     type: Date,
@@ -79,10 +94,10 @@ const UserSchema = new mongoose.Schema(
       default: false,
     },
     promotedCategories: {
-      type: [String], // e.g., ["PAN_VERIFICATION", "BANK_VERIFICATION"]
+      type: [String], // For free-tier access granted by admins
       default: [],
     },
-    activeSubscriptions: {
+    activeSubscriptions: { // This holds the array of paid plans
       type: [SubscriptionSchema],
       default: [],
     },
@@ -96,6 +111,7 @@ const UserSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 // Middleware to ensure either email or mobile is provided
 UserSchema.pre('save', function (next) {
@@ -125,43 +141,30 @@ UserSchema.pre('save', async function (next) {
   next();
 });
 
-// Match entered password to hashed password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Generate and set email verification OTP
 UserSchema.methods.getEmailOtp = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.emailOtp = otp;
-  this.emailOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.emailOtpExpires = Date.now() + 10 * 60 * 1000;
   return otp;
 };
 
-// Generate and set mobile verification OTP
 UserSchema.methods.getMobileOtp = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.mobileOtp = otp;
-  this.mobileOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.mobileOtpExpires = Date.now() + 10 * 60 * 1000;
   return otp;
 };
 
-// Generate and hash password reset token
 UserSchema.methods.getPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(20).toString('hex');
-
-  // Hash token and set to passwordResetToken field
-  this.passwordResetToken = crypto
-    .createHash('sha256')
-    .update(resetToken)
-    .digest('hex');
-
-  // Set expire time to 15 minutes
+  this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   this.passwordResetExpires = Date.now() + 15 * 60 * 1000;
-
   return resetToken;
 };
-
 
 const User = mongoose.model('User', UserSchema);
 export default User;
