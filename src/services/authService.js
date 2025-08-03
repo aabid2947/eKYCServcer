@@ -7,9 +7,11 @@ import crypto from 'crypto';
 import generateToken from '../utils/generateToken.js';
 import { verifyFirebaseToken } from '../utils/firebaseAdmin.js';
 
-// --- No changes needed for this function ---
+
+
+
 export const registerUser = async (userData) => {
-    // ... (logic is correct, only sends an OTP)
+  
     const { name, email, password } = userData;
     let user = await User.findOne({ email });
     if (user && user.isVerified) {

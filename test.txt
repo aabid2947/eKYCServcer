@@ -1,0 +1,141 @@
+[
+  {
+    "name": "Personal",
+    "monthly": { "price": 4999, "limitPerMonth": 25 },
+    "yearly": { "price": 38499, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "dl_verification",
+      "voter_id_verification",
+      "address_verification",
+      "criminal_court_record_verification",
+      "profile_lookup",
+      "profile_address_verification"
+    ]
+  },
+  {
+    "name": "Professional",
+    "monthly": { "price": 18999, "limitPerMonth": 100 },
+    "yearly": { "price": 146299, "limitPerMonth": 100 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "dl_verification",
+      "voter_id_verification",
+      "address_verification",
+      "criminal_court_record_verification",
+      "profile_lookup",
+      "profile_address_verification",
+      "passport_verify",
+      "rc_verification",
+      "verify_bank_account",
+      "fetch_gstin_by_pan",
+      "epfo_employer_verification",
+      "facematch_verification",
+      "liveness_check"
+    ]
+  },
+  {
+    "name": "Enterprise",
+    "monthly": { "price": 89999, "limitPerMonth": 500 },
+    "yearly": { "price": 692999, "limitPerMonth": 500 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "dl_verification",
+      "voter_id_verification",
+      "address_verification",
+      "criminal_court_record_verification",
+      "profile_lookup",
+      "profile_address_verification",
+      "passport_verify",
+      "rc_verification",
+      "verify_bank_account",
+      "fetch_gstin_by_pan",
+      "epfo_employer_verification",
+      "facematch_verification",
+      "liveness_check"
+    ]
+  },
+  {
+    "name": "Identity Verification Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "passport_verify",
+      "address_verification",
+      "voter_id_verification",
+      "dl_verification"
+    ]
+  },
+  {
+    "name": "Financial & Business Checks Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "fetch_gstin_by_pan",
+      "verify_bank_account",
+      "msme_verification",
+      "shop_registration_verification",
+      "company_verification"
+    ]
+  },
+  {
+    "name": "Biometric & AI-Based Verification Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "facematch_verification",
+      "liveness_check"
+    ]
+  },
+  {
+    "name": "Legal & Compliance Checks Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "criminal_court_record_verification"
+    ]
+  },
+  {
+    "name": "Vehicle Verification Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "rc_verification"
+    ]
+  },
+  {
+    "name": "Employment Verification Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": [
+      "epfo_employer_verification"
+    ]
+  },
+  {
+    "name": "Profile & Database Lookup Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": ["profile_lookup"]
+  },
+  {
+    "name": "CIN Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": ["fetch_cin_by_pan", "fetch_din_by_pan"]
+  },
+  {
+    "name": "PAN Plan",
+    "monthly": { "price": 299, "limitPerMonth": 25 },
+    "yearly": { "price": 2999, "limitPerMonth": 25 },
+    "monthStartDate": 1,
+    "includedServices": ["profile_address_verification"]
+  }
+]

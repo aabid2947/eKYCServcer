@@ -8,7 +8,7 @@ import transactionRoutes from './transactionRoute.js'
 import  reviewRouter  from './reviewRoute.js';
 import paymentRoutes from './PaymentRoute.js';
 import couponRoutes from './couponRoute.js'; 
-
+import pricingRoutes from './pricingRoute.js'; 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
@@ -29,6 +29,7 @@ router.use('/reviews', reviewRouter);
 // For submitting a verification request for ANY service
 router.use('/verification', verificationRoutes);
 
+router.use('/pricing', pricingRoutes); 
 router.use('/payment', paymentRoutes);
 
 export default router;

@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import Transaction from '../models/TransactionModel.js';
 import Coupon from '../models/CouponModel.js';
 import User from '../models/UserModel.js';
+import PricingPlan from '../models/PricingModel.js'; // <-- IMPORT THE NEW PRICING MODEL
 
 // Initialize Razorpay with API credentials
 const razorpay = new Razorpay({
@@ -11,70 +12,60 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// Subscription plans configuration
-// Prices stored in paise (1 INR = 100 paise)
-// Monthly plans have base limits, yearly plans have 12x the monthly limit
-const PLAN_CONFIG = {
-    Personal: {
-        monthly: { price: 499900, limit: 25 },
-        yearly: { price: 3849900, limit: 300 }, // 25 * 12
-    },
-    Professional: {
-        monthly: { price: 1899900, limit: 100 },
-        yearly: { price: 14629900, limit: 1200 }, // 100 * 12
-    },
-    Enterprise: {
-        monthly: { price: 8999900, limit: 500 },
-        yearly: { price: 69299900, limit: 6000 }, // 500 * 12
-    }
-};
-
 // Creates a new subscription order in Razorpay
 // Endpoint: POST /api/payment/order
 // Requires authentication
 // Handles plan selection, coupon validation, and initial order creation
 export const createSubscriptionOrder = async (req, res, next) => {
     try {
-        // 'plan' is the type ('monthly' or 'yearly'), 'category' is the name ('Personal', 'Professional')
-        const { category, plan, couponCode } = req.body;
+        // MODIFIED: 'category' is now 'planName', and 'plan' is 'planType' for clarity
+        const { planName, planType, couponCode } = req.body;
         const user = await User.findById(req.user.id);
 
-        if (!category || !plan) {
+        if (!planName || !planType) {
             res.status(400);
-            throw new Error('Category and plan type (monthly/yearly) are required.');
+            throw new Error('Plan name and plan type (monthly/yearly) are required.');
         }
 
-        // Check if user already has an active subscription for this category
+        // Check if user already has an active subscription for this plan
         const hasActiveSubscription = user.activeSubscriptions.some(sub => 
-            sub.category === category && sub.expiresAt > new Date()
+            sub.category === planName && sub.expiresAt > new Date()
         );
 
         if (hasActiveSubscription) {
             res.status(400);
-            throw new Error(`You already have an active subscription for the ${category} plan.`);
+            throw new Error(`You already have an active subscription for the ${planName} plan.`);
         }
 
-        // Get plan pricing and limits from configuration
-        const planDetails = PLAN_CONFIG[category]?.[plan];
-        if (!planDetails) {
+        // MODIFIED: Get plan pricing and limits from the database instead of a static object
+        const pricingPlan = await PricingPlan.findOne({ name: planName });
+        if (!pricingPlan) {
             res.status(404);
-            throw new Error(`Pricing for plan '${category} - ${plan}' not found.`);
+            throw new Error(`Pricing for plan '${planName}' not found.`);
         }
-        // Convert amount from paise to rupees for coupon calculation
-        const originalAmountInRupees = planDetails.price / 100;
+
+        const planDetails = pricingPlan[planType];
+        if (!planDetails || typeof planDetails.price === 'undefined' || typeof planDetails.limitPerMonth === 'undefined') {
+            res.status(404);
+            throw new Error(`Pricing details for plan '${planName} - ${planType}' are incomplete.`);
+        }
+
+        const originalAmountInRupees = planDetails.price;
+        const usageLimit = planDetails.limitPerMonth;
 
         let finalAmountInRupees = originalAmountInRupees;
         let discountValue = 0;
         let appliedCoupon = null;
 
-        // Coupon logic - This was well-written and remains unchanged.
+        // Coupon logic - updated to check against planName
         if (couponCode) {
             const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
             if (coupon) {
                 const isExpired = coupon.expiryDate && coupon.expiryDate < new Date();
                 const isUsedUp = coupon.maxUses && coupon.timesUsed >= coupon.maxUses;
                 const meetsMinAmount = originalAmountInRupees >= coupon.minAmount;
-                const isApplicable = coupon.applicableCategories.length === 0 || coupon.applicableCategories.includes(category);
+                // MODIFIED: Applicable categories now map to plan names
+                const isApplicable = coupon.applicableCategories.length === 0 || coupon.applicableCategories.includes(planName);
                 
                 if (!isExpired && !isUsedUp && meetsMinAmount && isApplicable) {
                     appliedCoupon = coupon;
@@ -89,14 +80,14 @@ export const createSubscriptionOrder = async (req, res, next) => {
         // Handle cases where the final amount is zero (100% discount)
         if (finalAmountInRupees <= 0) {
             const now = new Date();
-            const expiresAt = plan === 'monthly'
+            const expiresAt = planType === 'monthly'
                 ? new Date(new Date().setMonth(now.getMonth() + 1))
                 : new Date(new Date().setFullYear(now.getFullYear() + 1));
             
             const newSubscription = {
-                category: category,
-                planType: plan,
-                usageLimit: planDetails.limit,
+                category: planName,
+                planType: planType,
+                usageLimit: usageLimit, // Use limit from the database
                 expiresAt: expiresAt,
             };
 
@@ -106,8 +97,8 @@ export const createSubscriptionOrder = async (req, res, next) => {
             // Optionally, create a transaction record for this free activation
             await Transaction.create({
                 user: user._id,
-                category: category,
-                plan: plan,
+                category: planName, // Store the plan name
+                plan: planType,
                 status: 'completed',
                 amount: 0,
                 originalAmount: originalAmountInRupees,
@@ -128,7 +119,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
         }
         
         const options = {
-            amount: Math.round(finalAmountInRupees * 100), // Amount in paise
+            amount: Math.round(finalAmountInRupees * 100), // Amount in paise for Razorpay
             currency: "INR",
             receipt: `receipt_order_${new Date().getTime()}`,
         };
@@ -138,8 +129,8 @@ export const createSubscriptionOrder = async (req, res, next) => {
         // Create a pending transaction
         const transaction = await Transaction.create({
             user: user.id,
-            category: category,
-            plan: plan,
+            category: planName, // Store the plan name
+            plan: planType,
             status: 'pending',
             amount: finalAmountInRupees,
             originalAmount: originalAmountInRupees,
@@ -202,21 +193,21 @@ export const verifySubscriptionPayment = async (req, res, next) => {
         }
 
         // Payment signature verified successfully
-
-        // Mark transaction as completed and store payment details
         transaction.status = 'completed';
         transaction.razorpay_payment_id = razorpay_payment_id;
         transaction.razorpay_signature = razorpay_signature;
         await transaction.save();
 
-        // Retrieve subscription plan details from config
-        const planDetails = PLAN_CONFIG[transaction.category]?.[transaction.plan];
-        if (!planDetails) {
-            // Safety check to prevent invalid subscriptions
-            throw new Error('Could not find plan details during subscription activation.');
+        // MODIFIED: Retrieve subscription plan details from the database
+        const pricingPlan = await PricingPlan.findOne({ name: transaction.category });
+        if (!pricingPlan) {
+            throw new Error(`Could not find plan details for '${transaction.category}' during subscription activation.`);
         }
-
-        // Set subscription expiry based on plan type (monthly/yearly)
+        const planDetails = pricingPlan[transaction.plan];
+        if (!planDetails) {
+            throw new Error(`Could not find plan type details for '${transaction.category} - ${transaction.plan}'`);
+        }
+        
         const now = new Date();
         const expiresAt = transaction.plan === 'monthly'
             ? new Date(new Date().setMonth(now.getMonth() + 1))
@@ -224,10 +215,10 @@ export const verifySubscriptionPayment = async (req, res, next) => {
 
         // Create new subscription record with plan details and limits
         const newSubscription = {
-            category: transaction.category,
+            category: transaction.category, // This is the plan name
             planType: transaction.plan,
             razorpaySubscriptionId: razorpay_payment_id, // Use payment_id as a reference
-            usageLimit: planDetails.limit,
+            usageLimit: planDetails.limitPerMonth, // Get limit from the database
             purchasedAt: now,
             expiresAt: expiresAt,
         };
