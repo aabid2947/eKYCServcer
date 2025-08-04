@@ -72,9 +72,10 @@ export const updateServiceById = async (req, res, next) => {
   try {
     const { id } = req.params;
     // Destructure all possible fields, including combo_price
-    const { name, service_key, description, endpoint, price, combo_price, category, is_active } = req.body.changes;
-    
+    const { name, service_key, description, endpoint, price, combo_price, category, is_active } = req.body.changes.changes;
+    // console.log(req.body)
     // Construct the update object dynamically to only include provided fields
+    console.log("body",req.body)
     const updateData = {};
     if (name) updateData.name = name;
     if (service_key) updateData.service_key = service_key;
@@ -83,17 +84,19 @@ export const updateServiceById = async (req, res, next) => {
     if (price) updateData.price = price;
     if (category) updateData.category = category;
     if (is_active !== undefined) updateData.is_active = is_active;
-
+ 
     // Specifically handle the nested combo_price object
     if (combo_price) {
         if (combo_price.monthly) updateData['combo_price.monthly'] = combo_price.monthly;
         if (combo_price.yearly) updateData['combo_price.yearly'] = combo_price.yearly;
     }
+    console.log(updateData)
    
     const updated = await Service.findByIdAndUpdate(id, { $set: updateData }, {
       new: true,
       runValidators: true,
     });
+    console.log(updated)
 
     if (!updated) {
       res.status(404);

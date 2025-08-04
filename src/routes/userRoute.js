@@ -6,11 +6,10 @@ import {
     demoteUserCategory,
     sendSubscriptionReminder,
     updateUserProfile,
-    // --- IMPORT THE NEW CONTROLLER ---
     getUserById,
     extendSubscription,
-    revokeSubscription
-
+    revokeSubscription,
+    subscribeToNewsletter
 } from '../controllers/userController.js';
 import { check } from 'express-validator';
 import { protect ,authorize} from '../middleware/authMiddleware.js';
@@ -30,15 +29,14 @@ router.put(
 );
 
 
-// --- ADMIN ROUTES ---
 
 // General user management
 router.route('/all').get(protect, authorize('admin'), getAllUsers);
 router.route('/:userId/send-reminder').post(protect, authorize('admin'), sendSubscriptionReminder);
 
-// --- NEW ROUTE TO GET A SINGLE USER BY ID (FOR ADMIN) ---
 router.route('/:userId').get(protect, authorize('admin'), getUserById);
-// --- END NEW ROUTE ---
+
+router.post('/newsletter-subscribe', subscribeToNewsletter);
 
 // Manage promotional categories
 router.route('/:userId/promote').post(protect, authorize('admin'), promoteUserCategory);

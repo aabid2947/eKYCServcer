@@ -7,7 +7,7 @@
  */
 import dotenv from 'dotenv';
 dotenv.config();    
-const API_BASE_URL = 'https://stoplight.io/mocks/gridlines/gridlines-api-docs';
+const API_BASE_URL = 'https://api.gridlines.io';
  const API_KEY = process.env.GRIDLINES_API_KEY; // Use environment variables in production
 
 /**

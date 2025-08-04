@@ -344,3 +344,38 @@ export const revokeSubscription = async (req, res, next) => {
         next(error);
     }
 };
+
+export const subscribeToNewsletter = async (req, res) => {
+  const { email } = req.body;
+
+  // 1. Basic validation
+  if (!email) {
+    res.status(400);
+    throw new Error('Email is required.');
+  }
+
+  // 2. Find the user by email
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(200).json({
+    message: 'Thank you for subscribing to our newsletter!',
+    email,
+  });
+  }
+
+  // 3. Check if already subscribed
+  if (user.isSubscribedToNewsletter) {
+    res.status(409);
+    throw new Error('This email is already subscribed to our newsletter.');
+  }
+
+  // 4. Update only the newsletter subscription field
+  await User.updateOne({ email }, { $set: { isSubscribedToNewsletter: true } });
+
+  // 5. Send success response
+  res.status(200).json({
+    message: 'Thank you for subscribing to our newsletter!',
+    email,
+  });
+};

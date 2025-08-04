@@ -1,6 +1,6 @@
 import { getAddressByMobile } from "./src/services/gridLinesService.js";
 const mockData = {
-  "phone": "9297535809",
+  "phone": "+919297535809",
   "full_name": "RUBY",
   "consent": "Y"
 }

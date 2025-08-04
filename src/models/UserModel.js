@@ -31,6 +31,10 @@ const SubscriptionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+    isSubscribedToNewsletter: {
+      type: Boolean,
+      default: false,
+    },
   expiresAt: {
     type: Date,
     required: true,

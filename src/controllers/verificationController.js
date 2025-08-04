@@ -13,8 +13,8 @@ export const executeSubscribedService = async (req, res, next) => {
   const { serviceKey, payload } = req.body;
   const user = req.user; 
 
+  const service = await Service.findOne({ service_key: serviceKey });
   try {
-    const service = await Service.findOne({ service_key: serviceKey });
     
     // This check is redundant as the middleware already does it, but serves as a good failsafe.
     if (!service) {
