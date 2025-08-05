@@ -2,6 +2,7 @@
 import User from "../models/UserModel.js";
 import sendEmail from "../utils/sendEmail.js";
 import { validationResult } from 'express-validator';
+import { uploadToCloudinary, deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinary.js';
 
 // @desc    Get user profile (current logged-in user)
 // @route   GET /api/users/profile
@@ -13,6 +14,7 @@ export const getUserProfile = async (req, res, next) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      avatar: user.avatar,
       isVerified: user.isVerified,
       promotedCategories: user.promotedCategories,
       activeSubscriptions: user.activeSubscriptions,
@@ -78,6 +80,7 @@ export const getUserById = async (req, res, next) => {
 export const updateUserProfile = async (req, res) => {
     const errors = validationResult(req);
     const userId = req.user ? req.user._id : null;
+    console.log(req.user)
 
     if (!errors.isEmpty()) {
         return res.status(400).json({ success: false, errors: errors.array() });
@@ -108,6 +111,7 @@ export const updateUserProfile = async (req, res) => {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 isVerified: updatedUser.isVerified,
+                
                 promotedCategories: updatedUser.promotedCategories,
                 activeSubscriptions: updatedUser.activeSubscriptions, // Ensure this is returned
                 usedServices: updatedUser.usedServices,
@@ -378,4 +382,45 @@ export const subscribeToNewsletter = async (req, res) => {
     message: 'Thank you for subscribing to our newsletter!',
     email,
   });
+};
+
+
+// @desc    Update user avatar
+// @route   PUT /api/users/profile/avatar
+// @access  Private
+export const updateUserAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+    if (!req.file) {
+      // --- FIX: Set status code before throwing error ---
+      res.status(400); 
+      throw new Error('No image file uploaded');
+    }
+
+    // If user already has an avatar, delete it from Cloudinary
+    if (user.avatar) {
+      const publicId = getPublicIdFromUrl(user.avatar);
+      await deleteFromCloudinary(publicId);
+    }
+
+    // Upload new avatar to Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer, 'avatars');
+    
+    user.avatar = result.secure_url;
+   
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Avatar updated successfully',
+      avatar: user.avatar,
+    });
+  } catch (error) {
+    next(error);
+  }
 };

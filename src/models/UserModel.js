@@ -23,6 +23,7 @@ const SubscriptionSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+   
   usageCount: { // Starts at 0 and increments with each use
     type: Number,
     default: 0,
@@ -31,10 +32,7 @@ const SubscriptionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-    isSubscribedToNewsletter: {
-      type: Boolean,
-      default: false,
-    },
+  
   expiresAt: {
     type: Date,
     required: true,
@@ -73,6 +71,10 @@ const UserSchema = new mongoose.Schema(
         'Please add a valid email',
       ],
     },
+     avatar: {
+      type: String, // This will store the Cloudinary URL
+      default: '',
+    },
     mobile: {
       type: String,
       unique: true,
@@ -82,6 +84,10 @@ const UserSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+    },
+      isSubscribedToNewsletter: {
+      type: Boolean,
+      default: false,
     },
     password: {
       type: String,

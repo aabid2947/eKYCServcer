@@ -9,6 +9,7 @@ import  reviewRouter  from './reviewRoute.js';
 import paymentRoutes from './PaymentRoute.js';
 import couponRoutes from './couponRoute.js'; 
 import pricingRoutes from './pricingRoute.js'; 
+import blogRoutes from './blogRoute.js';
 const router = express.Router();
 
 router.use('/auth', authRoutes);
@@ -31,5 +32,7 @@ router.use('/verification', verificationRoutes);
 
 router.use('/pricing', pricingRoutes); 
 router.use('/payment', paymentRoutes);
+
+router.use('/blogs',blogRoutes)
 
 export default router;

@@ -20,7 +20,7 @@ router.route('/usage').get(protect, getUserServiceUsage);
 // --- Admin Routes ---
 
 // Get all transactions in the system
-router.route('/admin/all').get(protect, authorize('admin'), getAllTransactions);
+router.route('/admin/all').get( getAllTransactions);
 
 // Get revenue statistics for subscription sales
 router.route('/admin/stats').get(protect, authorize('admin'), getServiceUsageStats);

@@ -9,16 +9,22 @@ import {
     getUserById,
     extendSubscription,
     revokeSubscription,
-    subscribeToNewsletter
+    subscribeToNewsletter,
+    updateUserAvatar
 } from '../controllers/userController.js';
 import { check } from 'express-validator';
 import { protect ,authorize} from '../middleware/authMiddleware.js';
-
+import upload from '../middleware/uploadMiddleware.js'; 
 const router = express.Router();
 
 // User's own profile
 router.get('/profile', protect, getUserProfile);
-
+router.put(
+    '/profile/avatar', // This is a more RESTful route path
+    protect,
+    upload.single('avatar'), 
+    updateUserAvatar
+);
 router.put(
     '/profile',
     [
