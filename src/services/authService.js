@@ -206,9 +206,9 @@ export const loginUser = async (loginData) => {
         throw new Error('Invalid credentials');
     }
 
-    if (!user.isVerified) {
-        throw new Error('Please verify your email before logging in.');
-    }
+    // if (!user.isVerified) {
+    //     throw new Error('Please verify your email before logging in.');
+    // }
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {

@@ -1,6 +1,6 @@
 import { validationResult } from 'express-validator';
 import * as authService from '../services/authService.js';
-
+import User from '../models/UserModel.js';
 
 
 export const verifyEmailOtp = async (req, res) => {
@@ -58,6 +58,39 @@ export const register = async (req, res) => {
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const simpleRegister = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { name, email, password } = req.body;
+
+  try {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      console.log(90)
+      return res.status(400).json({ success: false, message: 'User already exists' });
+    }
+
+    // Create new user
+    const user = await User.create({ name, email, password });
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
