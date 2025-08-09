@@ -27,15 +27,8 @@ export const createSubscriptionOrder = async (req, res, next) => {
             throw new Error('Plan name and plan type (monthly/yearly) are required.');
         }
 
-        // Check if user already has an active subscription for this plan
-        const hasActiveSubscription = user.activeSubscriptions.some(sub => 
-            sub.category === planName && sub.expiresAt > new Date()
-        );
-
-        if (hasActiveSubscription) {
-            res.status(400);
-            throw new Error(`You already have an active subscription for the ${planName} plan.`);
-        }
+        // MODIFIED: Logic to block re-purchase is removed to allow renewals.
+        // The renewal logic is handled after payment verification or in the free plan section.
 
         // MODIFIED: Get plan pricing and limits from the database instead of a static object
         const pricingPlan = await PricingPlan.findOne({ name: planName });
@@ -80,24 +73,44 @@ export const createSubscriptionOrder = async (req, res, next) => {
         // Handle cases where the final amount is zero (100% discount)
         if (finalAmountInRupees <= 0) {
             const now = new Date();
-            const expiresAt = planType === 'monthly'
-                ? new Date(new Date().setMonth(now.getMonth() + 1))
-                : new Date(new Date().setFullYear(now.getFullYear() + 1));
-            
-            const newSubscription = {
-                category: planName,
-                planType: planType,
-                usageLimit: usageLimit, // Use limit from the database
-                expiresAt: expiresAt,
-            };
+            // UPDATED: Handle renewal for free plans
+            const existingSubIndex = user.activeSubscriptions.findIndex(sub => 
+                sub.category === planName && sub.expiresAt > now
+            );
 
-            user.activeSubscriptions.push(newSubscription);
+            if (existingSubIndex > -1) {
+                // RENEW an existing subscription
+                const existingSub = user.activeSubscriptions[existingSubIndex];
+                const currentExpiresAt = new Date(existingSub.expiresAt);
+                const newExpiresAt = planType === 'monthly'
+                    ? new Date(currentExpiresAt.setMonth(currentExpiresAt.getMonth() + 1))
+                    : new Date(currentExpiresAt.setFullYear(currentExpiresAt.getFullYear() + 1));
+                
+                user.activeSubscriptions[existingSubIndex].expiresAt = newExpiresAt;
+                user.activeSubscriptions[existingSubIndex].usageLimit += usageLimit; // Add to existing limit
+                user.activeSubscriptions[existingSubIndex].planType = planType;
+            } else {
+                // CREATE a new subscription
+                const expiresAt = planType === 'monthly'
+                    ? new Date(new Date().setMonth(now.getMonth() + 1))
+                    : new Date(new Date().setFullYear(now.getFullYear() + 1));
+                
+                const newSubscription = {
+                    category: planName,
+                    planType: planType,
+                    usageLimit: usageLimit,
+                    expiresAt: expiresAt,
+                    purchasedAt: now,
+                };
+                user.activeSubscriptions.push(newSubscription);
+            }
+            
             await user.save();
 
             // Optionally, create a transaction record for this free activation
             await Transaction.create({
                 user: user._id,
-                category: planName, // Store the plan name
+                category: planName,
                 plan: planType,
                 status: 'completed',
                 amount: 0,
@@ -114,7 +127,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
             return res.status(200).json({
                 success: true,
                 paymentSkipped: true,
-                message: 'Subscription activated successfully with a full discount.',
+                message: 'Subscription activated or renewed successfully with a full discount.',
             });
         }
         
@@ -129,7 +142,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
         // Create a pending transaction
         const transaction = await Transaction.create({
             user: user.id,
-            category: planName, // Store the plan name
+            category: planName,
             plan: planType,
             status: 'pending',
             amount: finalAmountInRupees,
@@ -208,25 +221,46 @@ export const verifySubscriptionPayment = async (req, res, next) => {
             throw new Error(`Could not find plan type details for '${transaction.category} - ${transaction.plan}'`);
         }
         
+        const user = await User.findById(transaction.user);
         const now = new Date();
-        const expiresAt = transaction.plan === 'monthly'
-            ? new Date(new Date().setMonth(now.getMonth() + 1))
-            : new Date(new Date().setFullYear(now.getFullYear() + 1));
 
-        // Create new subscription record with plan details and limits
-        const newSubscription = {
-            category: transaction.category, // This is the plan name
-            planType: transaction.plan,
-            razorpaySubscriptionId: razorpay_payment_id, // Use payment_id as a reference
-            usageLimit: planDetails.limitPerMonth, // Get limit from the database
-            purchasedAt: now,
-            expiresAt: expiresAt,
-        };
+        // UPDATED: Check for an existing active subscription to update it (renewal)
+        const existingSubIndex = user.activeSubscriptions.findIndex(sub => 
+            sub.category === transaction.category && sub.expiresAt > now
+        );
+        
+        if (existingSubIndex > -1) {
+            // RENEWAL: Update the existing subscription
+            const existingSub = user.activeSubscriptions[existingSubIndex];
+            const currentExpiresAt = new Date(existingSub.expiresAt);
+            
+            const newExpiresAt = transaction.plan === 'monthly'
+                ? new Date(currentExpiresAt.setMonth(currentExpiresAt.getMonth() + 1))
+                : new Date(currentExpiresAt.setFullYear(currentExpiresAt.getFullYear() + 1));
+            
+            user.activeSubscriptions[existingSubIndex].expiresAt = newExpiresAt;
+            user.activeSubscriptions[existingSubIndex].usageLimit += planDetails.limitPerMonth; // Add new verifications to existing
+            user.activeSubscriptions[existingSubIndex].planType = transaction.plan;
+            user.activeSubscriptions[existingSubIndex].purchasedAt = now;
+            
+        } else {
+            // NEW SUBSCRIPTION: Add a new subscription object to the array
+            const expiresAt = transaction.plan === 'monthly'
+                ? new Date(new Date().setMonth(now.getMonth() + 1))
+                : new Date(new Date().setFullYear(now.getFullYear() + 1));
 
-        // Add new subscription to user's active subscriptions list
-        await User.findByIdAndUpdate(transaction.user, {
-            $push: { activeSubscriptions: newSubscription }
-        });
+            const newSubscription = {
+                category: transaction.category,
+                planType: transaction.plan,
+                razorpaySubscriptionId: razorpay_payment_id, // Use payment_id as a reference
+                usageLimit: planDetails.limitPerMonth,
+                purchasedAt: now,
+                expiresAt: expiresAt,
+            };
+            user.activeSubscriptions.push(newSubscription);
+        }
+
+        await user.save(); // Save the updated user document
 
         // Update coupon usage count if discount was applied
         if (transaction.couponCode) {
@@ -238,7 +272,7 @@ export const verifySubscriptionPayment = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: 'Subscription activated successfully!',
+            message: 'Subscription activated or renewed successfully!',
         });
 
     } catch (error) {
