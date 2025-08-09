@@ -172,11 +172,53 @@ const addMultiplePricingPlans = asyncHandler(async (req, res) => {
     data: createdPlans,
   });
 });
+const updateLimits = async () => {
+  try {
+    console.log('Starting the pricing plan update script...');
+
+    // 1. Define the plans that should NOT be updated.
+    const excludedPlans = ['Personal', 'Professional', 'Enterprise'];
+    console.log(`Excluding the following plans from update: ${excludedPlans.join(', ')}`);
+
+    // 2. Define the filter to find all plans NOT in the exclusion list.
+    const filter = {
+      name: { $nin: excludedPlans },
+    };
+
+    // 3. Define the update operation using an aggregation pipeline.
+    // This allows us to use the properties of the document (like the size of an array) to set new values.
+    const updateOperation = [
+      {
+        $set: {
+          // Set the monthly limit to the size of the 'includedServices' array.
+          'monthly.limitPerMonth': { $size: '$includedServices' },
+          // Set the yearly limit to the same size.
+          'yearly.limitPerMonth': { $size: '$includedServices' },
+        },
+      },
+    ];
+
+    // 4. Execute the update for all matching documents.
+    const result = await PricingPlan.updateMany(filter, updateOperation);
+
+    console.log('-------------------------------------------');
+    console.log('Update script finished successfully!');
+    console.log(`Total plans matched for update: ${result.matchedCount}`);
+    console.log(`Total plans successfully updated: ${result.modifiedCount}`);
+    console.log('-------------------------------------------');
+    
+  } catch (error) {
+    console.error('An error occurred during the update process:');
+    console.error(error);
+  } 
+};
+
 
 export {
   addPricingPlan,
   updatePricingPlan,
   deletePricingPlan,
   getAllPricingPlans,
-  addMultiplePricingPlans, 
+  addMultiplePricingPlans,
+  updateLimits
 };

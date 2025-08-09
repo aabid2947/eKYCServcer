@@ -1,15 +1,9 @@
 import mongoose from 'mongoose';
 import slugify from 'slugify';
 
-// A reusable sub-schema for items with a title and description
-const featureSchema = new mongoose.Schema({
-  title: { type: String, trim: true },
-  description: { type: String, trim: true },
-});
-
 const blogSchema = new mongoose.Schema(
   {
-    // --- Fields for BlogLanding Card ---
+    // Basic Blog Information
     title: {
       type: String,
       required: [true, 'Please provide a blog title'],
@@ -23,6 +17,11 @@ const blogSchema = new mongoose.Schema(
     excerpt: {
       type: String,
       required: [true, 'Please provide an excerpt'],
+      maxlength: [300, 'Excerpt cannot exceed 300 characters']
+    },
+    content: {
+      type: String,
+      required: [true, 'Please provide blog content'],
     },
     author: {
       type: String,
@@ -30,46 +29,48 @@ const blogSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['Technology', 'Security', 'Compliance', 'Global', 'Business', 'General'],
+      enum:  [
+  "PAN",
+  "CIN",
+  "Financial & Business Checks",
+  "Identity Verification",
+  "Employment Verification",
+  "Biometric & AI-Based Verification",
+  "Profile & Database Lookup",
+  "Legal & Compliance Checks",
+  "Vehicle Verification"
+],
       required: [true, 'Please provide a category'],
     },
-    mainImage: {
+    tags: [{
+      type: String,
+      trim: true
+    }],
+    
+    // Images
+    featuredImage: {
       public_id: String,
       url: String,
     },
-
-    // --- Fields for the Detailed Blog Page ---
-
-    // TrustHero Section
-    heroSubtitle: String,
-    heroTitle: String,
-    heroDescription: String,
-    heroImage1: { public_id: String, url: String },
-    heroImage2: { public_id: String, url: String },
-
-    // VerificationFeatures Section
-    verificationTitle: String,
-    verificationDescription: String,
-    verificationFeatures: [featureSchema],
-
-    // HowIdvWorks Section
-    howItWorksTitle: String,
-    howItWorksDescription: String,
-    howItWorksImage: { public_id: String, url: String },
-    howItWorksSteps: [featureSchema],
-
-    // ProductBenefits Section
-    benefitsSubtitle: String,
-    benefitsTitle: String,
-    benefitsDescription: String,
-    productBenefits: [featureSchema],
-
-    // TrustSection
-    trustTitle: String,
-    trustImage: { public_id: String, url: String },
-    trustCard1: featureSchema,
-    trustCard2: featureSchema,
-    trustCard3: featureSchema,
+    
+    // SEO Fields
+    metaTitle: String,
+    metaDescription: String,
+    
+    // Publishing
+    status: {
+      type: String,
+      enum: ['draft', 'published', 'archived'],
+      default: 'draft'
+    },
+    publishedAt: {
+      type: Date,
+      default: null
+    },
+    readingTime: {
+      type: Number, // in minutes
+      default: 5
+    }
   },
   {
     timestamps: true,
@@ -79,10 +80,31 @@ const blogSchema = new mongoose.Schema(
 // Middleware to create slug from title before saving
 blogSchema.pre('save', function (next) {
   if (this.isModified('title') || this.isNew) {
-    this.slug = slugify(this.title, { lower: true, strict: true, remove: /[*+~.()'"!:@]/g });
+    this.slug = slugify(this.title, { 
+      lower: true, 
+      strict: true, 
+      remove: /[*+~.()'"!:@]/g 
+    });
   }
+  
+  // Set publishedAt when status changes to published
+  if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
+    this.publishedAt = new Date();
+  }
+  
+  // Calculate reading time based on content length (average 200 words per minute)
+  if (this.isModified('content')) {
+    const wordCount = this.content.split(/\s+/).length;
+    this.readingTime = Math.max(1, Math.ceil(wordCount / 200));
+  }
+  
   next();
 });
+
+// Index for better query performance
+blogSchema.index({ slug: 1 });
+blogSchema.index({ category: 1, status: 1 });
+blogSchema.index({ publishedAt: -1 });
 
 const Blog = mongoose.model('Blog', blogSchema);
 export default Blog;

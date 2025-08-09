@@ -4,13 +4,15 @@ import {
   updatePricingPlan,
   deletePricingPlan,
   getAllPricingPlans,
-  addMultiplePricingPlans
+  addMultiplePricingPlans,
+  updateLimits
 } from '../controllers/pricingController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js'; 
 
-const router = express.Router();
-router.route('/bulk').post( addMultiplePricingPlans);
 
+const router = express.Router();
+// router.route('/bulk').post( addMultiplePricingPlans);
+// router.get('/test',updateLimits)
 router
   .route('/')
   .post(protect, authorize('admin'), addPricingPlan)
