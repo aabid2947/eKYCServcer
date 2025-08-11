@@ -22,6 +22,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
         // MODIFIED: 'category' is now 'planName', and 'plan' is 'planType' for clarity
         const { planName, planType, couponCode } = req.body;
         const user = await User.findById(req.user.id);
+        console.log(planName)
 
         if (!planName || !planType) {
             res.status(400);
@@ -60,7 +61,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
                 const meetsMinAmount = originalAmountInRupees >= coupon.minAmount;
                 // MODIFIED: Applicable categories now map to plan names
                 const isApplicable = coupon.applicableCategories.length === 0 || coupon.applicableCategories.includes(planName);
-                
+
                 if (!isExpired && !isUsedUp && meetsMinAmount && isApplicable) {
                     appliedCoupon = coupon;
                     discountValue = (coupon.discount.type === 'fixed')
@@ -70,12 +71,12 @@ export const createSubscriptionOrder = async (req, res, next) => {
                 }
             }
         }
-        
+
         // Handle cases where the final amount is zero (100% discount)
         if (finalAmountInRupees <= 0) {
             const now = new Date();
             // UPDATED: Handle renewal for free plans
-            const existingSubIndex = user.activeSubscriptions.findIndex(sub => 
+            const existingSubIndex = user.activeSubscriptions.findIndex(sub =>
                 sub.category === planName && sub.expiresAt > now
             );
 
@@ -86,7 +87,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
                 const newExpiresAt = planType === 'monthly'
                     ? new Date(currentExpiresAt.setMonth(currentExpiresAt.getMonth() + 1))
                     : new Date(currentExpiresAt.setFullYear(currentExpiresAt.getFullYear() + 1));
-                
+
                 user.activeSubscriptions[existingSubIndex].expiresAt = newExpiresAt;
                 user.activeSubscriptions[existingSubIndex].usageLimit += usageLimit; // Add to existing limit
                 user.activeSubscriptions[existingSubIndex].planType = planType;
@@ -95,7 +96,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
                 const expiresAt = planType === 'monthly'
                     ? new Date(new Date().setMonth(now.getMonth() + 1))
                     : new Date(new Date().setFullYear(now.getFullYear() + 1));
-                
+
                 const newSubscription = {
                     category: planName,
                     planType: planType,
@@ -105,7 +106,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
                 };
                 user.activeSubscriptions.push(newSubscription);
             }
-            
+
             await user.save();
 
             // Optionally, create a transaction record for this free activation
@@ -131,7 +132,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
                 message: 'Subscription activated or renewed successfully with a full discount.',
             });
         }
-        
+
         const options = {
             amount: Math.round(finalAmountInRupees * 100), // Amount in paise for Razorpay
             currency: "INR",
@@ -193,29 +194,48 @@ export const createDynamicSubscriptionOrder = async (req, res, next) => {
             throw new Error(`No services found for the subcategory: '${subcategory}'`);
         }
 
-        // 2. Check if a pricing plan for this subcategory already exists.
+        // get services in this subcategory
+        // const servicesInSubcategory = await Service.find({ subcategory }).select('_id');
+        const serviceIds = servicesInSubcategory.map(s => s._id);
+        const numberOfServices = serviceIds.length;
+
         let pricingPlan = await PricingPlan.findOne({ name: subcategory });
 
         if (!pricingPlan) {
-            // If not, create it dynamically.
-            const serviceIds = servicesInSubcategory.map(s => s._id);
-            const numberOfServices = servicesInSubcategory.length;
-
+            // create if not exists
             pricingPlan = new PricingPlan({
-                name: subcategory, // Plan name is the subcategory name
+                name: subcategory,
                 monthly: {
-                    price: 299, // Fixed price as requested
-                    limitPerMonth: numberOfServices, // Usage limit is the number of services
+                    price: 299,
+                    limitPerMonth: numberOfServices,
                 },
-                yearly: { // Provide default yearly values
+                yearly: {
                     price: 2990,
                     limitPerMonth: numberOfServices * 12,
                 },
-                monthStartDate: 1, // Default start day
+                monthStartDate: 1,
                 includedServices: serviceIds,
             });
+
+            await pricingPlan.save();
+        } else {
+            // update existing plan to reflect current service count & included services
+            pricingPlan.monthly = pricingPlan.monthly || {};
+            pricingPlan.yearly = pricingPlan.yearly || {};
+
+            pricingPlan.monthly.price = 299;
+            pricingPlan.monthly.limitPerMonth = numberOfServices;
+
+            pricingPlan.yearly.price = 2990;
+            pricingPlan.yearly.limitPerMonth = numberOfServices * 12;
+
+            pricingPlan.includedServices = serviceIds;
+
             await pricingPlan.save();
         }
+
+        // `pricingPlan` now contains the created/updated plan
+
 
         // --- End of Core Dynamic Logic ---
 
@@ -228,8 +248,8 @@ export const createDynamicSubscriptionOrder = async (req, res, next) => {
             sub.category === subcategory && new Date(sub.expiresAt) > new Date()
         );
         if (hasActiveSub) {
-             res.status(400);
-             throw new Error(`You already have an active subscription for '${subcategory}'.`);
+            res.status(400);
+            throw new Error(`You already have an active subscription for '${subcategory}'.`);
         }
 
         const options = {
@@ -288,10 +308,10 @@ export const verifySubscriptionPayment = async (req, res, next) => {
         }
 
         if (transaction.status !== 'pending') {
-             res.status(400);
-             throw new Error(`This transaction has already been processed with status: ${transaction.status}.`);
+            res.status(400);
+            throw new Error(`This transaction has already been processed with status: ${transaction.status}.`);
         }
-        
+
         // Verify the payment signature
         const hmac_body = razorpay_order_id + "|" + razorpay_payment_id;
         const expectedSignature = crypto
@@ -322,29 +342,29 @@ export const verifySubscriptionPayment = async (req, res, next) => {
         if (!planDetails) {
             throw new Error(`Could not find plan type details for '${transaction.category} - ${transaction.plan}'`);
         }
-        
+
         const user = await User.findById(transaction.user);
         const now = new Date();
 
         // UPDATED: Check for an existing active subscription to update it (renewal)
-        const existingSubIndex = user.activeSubscriptions.findIndex(sub => 
+        const existingSubIndex = user.activeSubscriptions.findIndex(sub =>
             sub.category === transaction.category && sub.expiresAt > now
         );
-        
+
         if (existingSubIndex > -1) {
             // RENEWAL: Update the existing subscription
             const existingSub = user.activeSubscriptions[existingSubIndex];
             const currentExpiresAt = new Date(existingSub.expiresAt);
-            
+
             const newExpiresAt = transaction.plan === 'monthly'
                 ? new Date(currentExpiresAt.setMonth(currentExpiresAt.getMonth() + 1))
                 : new Date(currentExpiresAt.setFullYear(currentExpiresAt.getFullYear() + 1));
-            
+
             user.activeSubscriptions[existingSubIndex].expiresAt = newExpiresAt;
             user.activeSubscriptions[existingSubIndex].usageLimit += planDetails.limitPerMonth; // Add new verifications to existing
             user.activeSubscriptions[existingSubIndex].planType = transaction.plan;
             user.activeSubscriptions[existingSubIndex].purchasedAt = now;
-            
+
         } else {
             // NEW SUBSCRIPTION: Add a new subscription object to the array
             const expiresAt = transaction.plan === 'monthly'
@@ -379,7 +399,7 @@ export const verifySubscriptionPayment = async (req, res, next) => {
 
     } catch (error) {
         // If an error occurs after payment, mark the transaction as failed for manual review
-        if(transaction && transaction.status === 'pending') {
+        if (transaction && transaction.status === 'pending') {
             transaction.status = 'failed';
             transaction.metadata = { reason: 'Subscription activation failed after payment.', error: error.message };
             await transaction.save();

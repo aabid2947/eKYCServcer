@@ -5,7 +5,9 @@ import {
   deletePricingPlan,
   getAllPricingPlans,
   addMultiplePricingPlans,
-  updateLimits
+  updateLimits,
+  syncSubcategoriesInPlans
+  
 } from '../controllers/pricingController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js'; 
 
@@ -17,6 +19,7 @@ router
   .route('/')
   .post(protect, authorize('admin'), addPricingPlan)
   .get(getAllPricingPlans);
+  router.route('/sync-subcategories').post(syncSubcategoriesInPlans);
 
 router
   .route('/:id')

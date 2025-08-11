@@ -6,9 +6,9 @@
  * @requires an environment variable `REACT_APP_GRIDLINES_API_KEY` to be set.
  */
 import dotenv from 'dotenv';
-dotenv.config();    
+dotenv.config();
 const API_BASE_URL = 'https://api.gridlines.io';
- const API_KEY = process.env.GRIDLINES_API_KEY; // Use environment variables in production
+const API_KEY = process.env.GRIDLINES_API_KEY; // Use environment variables in production
 
 /**
  * A generic helper function to make POST requests with a JSON body.
@@ -22,21 +22,24 @@ export const callJsonApi = async (endpoint, body = {}) => {
     if (!API_KEY) {
         throw new Error("Gridlines API key is not configured.");
     }
-    
+    if (body && ('consent_text' in body)) {
+        body.consent_text = 'I provide consent to fetch information.';
+    }
+
     const requestBody = {
         ...body,
         consent: "Y", // Mandatory consent parameter
     };
-
+    //   console.log(requestBody,`${API_BASE_URL}${endpoint}`,API_KEY)
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
-             headers: {
+            headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'X-API-Key': API_KEY,
                 'X-Auth-Type': 'API-Key',
-                'X-Reference-ID': body.reference_id || '',
+                'X-Reference-ID': '',
             },
             body: JSON.stringify(requestBody),
         });
@@ -44,12 +47,13 @@ export const callJsonApi = async (endpoint, body = {}) => {
         const result = await response.json();
 
         if (!response.ok || result.status !== 200) {
-            console.error(`❌ API error details for endpoint: ${endpoint}`, {
+            console.error(`❌ Error details for endpoint: ${endpoint}`, {
                 status: response.status,
                 statusText: response.statusText,
                 responseBody: result
             });
-            throw new Error(result.message || `API request failed with status ${response.status}`);
+            // console.log(result?.metadata?.fields?.message)
+            throw new Error(result?.error?.metadata?.fields?.[0]?.message || `Request failed with status ${response.status}`);
         }
 
         return result.data;
@@ -90,7 +94,7 @@ export const callFormApi = async (endpoint, formData) => {
         const result = await response.json();
 
         if (!response.ok || result.status !== 200) {
-           console.error(`❌ API error details for endpoint: ${endpoint}`, {
+            console.error(`❌ API error details for endpoint: ${endpoint}`, {
                 status: response.status,
                 statusText: response.statusText,
                 responseBody: result

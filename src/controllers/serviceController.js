@@ -227,8 +227,7 @@ export const deleteAllServices = async (req, res, next) => {
 export const createMultipleServices = async (req, res, next) => {
   try {
     const servicesData = req.body; // Expect an array of service objects
-    console.log('BODY TYPE:', typeof req.body);
-console.log('BODY VALUE:', req.body)
+
 
     // Validate that servicesData is an array
     if (!Array.isArray(servicesData)) {

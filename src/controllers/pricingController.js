@@ -213,6 +213,62 @@ const updateLimits = async () => {
   } 
 };
 
+export const syncSubcategoriesInPlans = asyncHandler(async (req, res, next) => {
+    // Define the names of the plans you want to update
+    const planNamesToUpdate = ["Personal", "Professional", "Enterprise"];
+
+    // 1. Fetch the target pricing plans and all services in one go.
+    const [plans, allServices] = await Promise.all([
+        PricingPlan.find({ name: { $in: planNamesToUpdate } }).populate('includedServices', 'subcategory'),
+        Service.find({ subcategory: { $ne: null, $ne: '' } }).select('_id subcategory') // Get all services with a subcategory
+    ]);
+
+    if (!plans || plans.length === 0) {
+        res.status(404);
+        throw new Error('Could not find the specified pricing plans (Personal, Professional, Enterprise).');
+    }
+
+    const updatedPlans = [];
+
+    for (const plan of plans) {
+        // 2. Create a set of all unique subcategories present in the plan's current services.
+        const subcategoriesInPlan = new Set();
+        plan.includedServices.forEach(service => {
+            if (service.subcategory) {
+                subcategoriesInPlan.add(service.subcategory);
+            }
+        });
+        
+        if (subcategoriesInPlan.size === 0) {
+            // If no services with subcategories exist in this plan, skip to the next one.
+            continue;
+        }
+
+        // 3. Find all service IDs that belong to these identified subcategories.
+        const serviceIdsToAdd = allServices
+            .filter(service => subcategoriesInPlan.has(service.subcategory))
+            .map(service => service._id);
+
+        // 4. Create a new set of unique service IDs for the plan.
+        const currentServiceIds = plan.includedServices.map(s => s._id.toString());
+        const allServiceIdsForPlan = new Set([...currentServiceIds, ...serviceIdsToAdd.map(id => id.toString())]);
+        
+        // 5. Update the plan's includedServices list.
+        plan.includedServices = Array.from(allServiceIdsForPlan);
+        
+        // Save the updated plan and add the promise to an array.
+        updatedPlans.push(plan.save());
+    }
+
+    // Wait for all plans to be saved.
+    await Promise.all(updatedPlans);
+
+    res.status(200).json({
+        success: true,
+        message: `${updatedPlans.length} pricing plan(s) were successfully synchronized with their subcategories.`,
+    });
+});
+
 
 export {
   addPricingPlan,

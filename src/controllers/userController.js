@@ -137,7 +137,7 @@ export const getUserById = async (req, res, next) => {
 export const updateUserProfile = async (req, res) => {
     const errors = validationResult(req);
     const userId = req.user ? req.user._id : null;
-    console.log(req.user)
+   
 
     if (!errors.isEmpty()) {
         return res.status(400).json({ success: false, errors: errors.array() });
