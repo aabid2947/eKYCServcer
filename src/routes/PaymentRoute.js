@@ -1,5 +1,5 @@
 import express from 'express';
-import { createSubscriptionOrder, verifySubscriptionPayment } from '../controllers/PaymentController.js';
+import { createSubscriptionOrder, verifySubscriptionPayment, createDynamicSubscriptionOrder } from '../controllers/PaymentController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import multer from 'multer';
 
@@ -17,6 +17,7 @@ const upload = multer({ storage: storage });
  */
 router.route('/order').post(protect, createSubscriptionOrder);
 
+router.route('/dynamic-order').post(protect, createDynamicSubscriptionOrder);
 /**
  * @route   POST /api/payment/verify
  * @desc    Verifies the payment and then executes the service.

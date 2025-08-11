@@ -1,1 +1,141 @@
-tUEIbPBm3Hh6TBI9gOE0KzStIp63M3Fk
+[
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GSTIN Lite",
+    "service_key": "fetch-lite",
+    "description": "Fetches brief details for a valid GSTIN (legal name, contact details) from the GST Council database.",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-lite/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "gstin", "label": "GSTIN", "type": "text", "placeholder": "Enter GSTIN" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GSTIN Detailed",
+    "service_key": "fetch-detailed",
+    "description": "Fetches detailed information for a valid GSTIN (legal name, contact details, directors, etc.) from the GST Council database.",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-detailed/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "gstin", "label": "GSTIN", "type": "text", "placeholder": "Enter GSTIN" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GSTIN By Name",
+    "service_key": "fetch-by-name",
+    "description": "Searches the GST Council database for GSTIN records that match a given company/trade name.",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-by-name/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "company_name", "label": "Company Name", "type": "text", "placeholder": "Enter company name" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GSTIN Contact Details",
+    "service_key": "fetch-contact-details",
+    "description": "Fetches verified contact information for a business using its GSTIN.",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-contact-details/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "gstin", "label": "GSTIN", "type": "text", "placeholder": "Enter GSTIN" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch MCC Codes by GSTIN",
+    "service_key": "fetch-mcc-codes",
+    "description": "Retrieves Merchant Category Code (MCC) classification associated with a GSTIN to help categorize businesses for payment processing.",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-mcc-codes/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "gstin", "label": "GSTIN", "type": "text", "placeholder": "Enter GSTIN" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GSTIN by Mobile",
+    "service_key": "fetch-by-mobile",
+    "description": "Retrieves GSTIN records linked to a mobile number and their statuses (useful for instant KYC and vendor verification).",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-by-mobile/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "mobile_number", "label": "Mobile Number", "type": "text", "placeholder": "Enter mobile number" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GSTIN Turnover Details",
+    "service_key": "fetch-turnover-details",
+    "description": "Fetches GST profile and estimates turnover (filed/estimated) at GSTIN and PAN levels for underwriting and MSME evaluation.",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-turnover-details/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "gstin", "label": "GSTIN", "type": "text", "placeholder": "Enter GSTIN" },
+      { "name": "financial_year", "label": "Financial Year", "type": "text", "placeholder": "e.g. 2024-25" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  },
+  {
+    "combo_price": { "monthly": 299, "yearly": "" },
+    "name": "Fetch GST Certificate",
+    "service_key": "fetch-certificate",
+    "description": "Retrieves the latest issued GST Registration Certificate by logging into the GST Portal (requires GST Portal username/password).",
+    "imageUrl": "",
+    "price": 299,
+    "is_active": true,
+    "globalUsageCount": 0,
+    "endpoint": "/gstin-api/fetch-certificate/",
+    "apiType": "json",
+    "inputFields": [
+      { "name": "username", "label": "GST Portal Username", "type": "text", "placeholder": "Enter GST Portal username" },
+      { "name": "password", "label": "GST Portal Password", "type": "password", "placeholder": "Enter GST Portal password" }
+    ],
+    "outputFields": [],
+    "subcategory": "GSTIN verification"
+  }
+]
+

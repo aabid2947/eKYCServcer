@@ -5,6 +5,7 @@ import Transaction from '../models/TransactionModel.js';
 import Coupon from '../models/CouponModel.js';
 import User from '../models/UserModel.js';
 import PricingPlan from '../models/PricingModel.js'; // <-- IMPORT THE NEW PRICING MODEL
+import Service from '../models/Service.js';
 
 // Initialize Razorpay with API credentials
 const razorpay = new Razorpay({
@@ -164,6 +165,107 @@ export const createSubscriptionOrder = async (req, res, next) => {
         next(error);
     }
 };
+
+
+/**
+ * @desc    Creates a new subscription order for a DYNAMIC subcategory-based plan.
+ * @route   POST /api/payment/dynamic-order
+ * @access  Private
+ */
+export const createDynamicSubscriptionOrder = async (req, res, next) => {
+    try {
+        const { subcategory } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (!subcategory) {
+            res.status(400);
+            throw new Error('Subcategory is required for a dynamic plan purchase.');
+        }
+
+        // --- Core Dynamic Logic ---
+        console.log(subcategory)
+
+        // 1. Find all services belonging to this subcategory
+        const servicesInSubcategory = await Service.find({ subcategory: subcategory });
+
+        if (servicesInSubcategory.length === 0) {
+            res.status(404);
+            throw new Error(`No services found for the subcategory: '${subcategory}'`);
+        }
+
+        // 2. Check if a pricing plan for this subcategory already exists.
+        let pricingPlan = await PricingPlan.findOne({ name: subcategory });
+
+        if (!pricingPlan) {
+            // If not, create it dynamically.
+            const serviceIds = servicesInSubcategory.map(s => s._id);
+            const numberOfServices = servicesInSubcategory.length;
+
+            pricingPlan = new PricingPlan({
+                name: subcategory, // Plan name is the subcategory name
+                monthly: {
+                    price: 299, // Fixed price as requested
+                    limitPerMonth: numberOfServices, // Usage limit is the number of services
+                },
+                yearly: { // Provide default yearly values
+                    price: 2990,
+                    limitPerMonth: numberOfServices * 12,
+                },
+                monthStartDate: 1, // Default start day
+                includedServices: serviceIds,
+            });
+            await pricingPlan.save();
+        }
+
+        // --- End of Core Dynamic Logic ---
+
+        const planType = 'monthly'; // Hardcoded as per requirement for 1-month expiry
+        const planDetails = pricingPlan[planType];
+        const amountInRupees = planDetails.price;
+
+        // Prevent re-purchase of an already active dynamic plan
+        const hasActiveSub = user.activeSubscriptions.some(sub =>
+            sub.category === subcategory && new Date(sub.expiresAt) > new Date()
+        );
+        if (hasActiveSub) {
+             res.status(400);
+             throw new Error(`You already have an active subscription for '${subcategory}'.`);
+        }
+
+        const options = {
+            amount: Math.round(amountInRupees * 100), // Amount in paise
+            currency: "INR",
+            receipt: `receipt_dynamic_${new Date().getTime()}`,
+        };
+
+        const order = await razorpay.orders.create(options);
+
+        // Create a pending transaction for this dynamic order
+        const transaction = await Transaction.create({
+            user: user.id,
+            category: subcategory, // The category name is the subcategory itself
+            plan: planType,
+            status: 'pending',
+            amount: amountInRupees,
+            originalAmount: amountInRupees,
+            discountApplied: 0,
+            couponCode: undefined,
+            razorpay_order_id: order.id,
+        });
+
+        res.status(201).json({
+            success: true,
+            paymentSkipped: false,
+            order,
+            key_id: process.env.RAZORPAY_KEY_ID,
+            transactionId: transaction._id,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 // Verifies Razorpay payment and activates user subscription
 // Endpoint: POST /api/payment/verify

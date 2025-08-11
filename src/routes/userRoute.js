@@ -10,7 +10,8 @@ import {
     extendSubscription,
     revokeSubscription,
     subscribeToNewsletter,
-    updateUserAvatar
+    updateUserAvatar,
+    promoteUserToSubcategory 
 } from '../controllers/userController.js';
 import { check } from 'express-validator';
 import { protect ,authorize} from '../middleware/authMiddleware.js';
@@ -47,7 +48,7 @@ router.post('/newsletter-subscribe', subscribeToNewsletter);
 // Manage promotional categories
 router.route('/:userId/promote').post(protect, authorize('admin'), promoteUserCategory);
 router.route('/:userId/demote').post(protect, authorize('admin'), demoteUserCategory);
-
+router.route('/admin/promote-subcategory').post(protect, authorize('admin'), promoteUserToSubcategory)
 
 // NEW ADMIN ROUTES FOR SUBSCRIPTION MANAGEMENT
 router.route('/admin/extend-subscription').post(protect, authorize('admin'), extendSubscription);

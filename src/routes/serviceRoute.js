@@ -9,6 +9,7 @@ import {
   deleteServiceById,
   deleteAllServices,
   manualUpdate,
+  createMultipleServices
 } from '../controllers/serviceController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
@@ -16,6 +17,7 @@ const router = express.Router();
 
 // Public route to get all active services
 router.route('/').get(getAllServices);
+// router.route('/bulk').post(createMultipleServices);
 
 // Admin route to create a new service
 router.route('/').post(protect, authorize('admin'),   upload.single('image'),createService);

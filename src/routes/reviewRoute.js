@@ -10,7 +10,12 @@ import {
 } from '../controllers/reviewController.js';
 import { authorize, protect } from '../middleware/authMiddleware.js';
 
+// import { deleteAllReviews } from '../controllers/reviewController.js';
+// import { protect, authorize } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
+// router.delete('/all',deleteAllReviews);
+
 
 router.route('/service/:serviceId').get(getServiceReviews);
 

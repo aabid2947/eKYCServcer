@@ -9,6 +9,25 @@ import Service from '../models/Service.js'
  * @access Private
  */
 
+/**
+ * @description Delete all reviews (Admin only)
+ * @route DELETE /api/reviews
+ * @access Private/Admin
+ */
+export const deleteAllReviews = async (req, res) => {
+    try {
+        const result = await Review.deleteMany({});
+        res.status(200).json({
+            success: true,
+            message: 'All reviews deleted successfully',
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Server Error' });
+    }
+};
+
 export const createReview = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

@@ -18,7 +18,14 @@ const ServiceSchema = new mongoose.Schema(
     // Multiple services can belong to the same category.
     category: {
       type: String,
-      required: [true, 'Please provide a Category'],
+      // required is now handled by the pre-save hook below
+    },
+
+    // New subcategory field
+    subcategory: {
+      type: String,
+      required: false, // Not strictly required, but used in validation
+      trim: true,
     },
     
     description: { type: String, required: [true, 'Please provide a service description'] },
@@ -27,7 +34,7 @@ const ServiceSchema = new mongoose.Schema(
     
     combo_price: {
       monthly: { type: Number, required: [true, 'Please set a monthly price'], min: 0 },
-      yearly: { type: Number, required: [true, 'Please set a yearly price'], min: 0 },
+      yearly: { type: Number},
     },
 
     is_active: { type: Boolean, default: true },
@@ -41,6 +48,21 @@ const ServiceSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Pre-save hook to ensure either category or subcategory is present
+ServiceSchema.pre('save', function(next) {
+  // If both category and subcategory are missing (or are empty strings after trim)
+  if (!this.category && !this.subcategory) {
+    return next(new Error('A service must have either a category or a subcategory.'));
+  }
+  
+  // If category is missing but subcategory is present, set category to an empty string
+  if (!this.category) {
+    this.category = '';
+  }
+
+  next();
+});
 
 const Service = mongoose.model('Service', ServiceSchema);
 export default Service;

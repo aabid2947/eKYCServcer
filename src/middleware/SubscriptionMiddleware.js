@@ -40,10 +40,12 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
     // Along the way, collect indices of subscriptions for this service that are invalid (expired or used up).
     for (let i = 0; i < user.activeSubscriptions.length; i++) {
         const sub = user.activeSubscriptions[i];
+        console.log(sub)
         
         const isPlanCovered = coveringPlanNames.includes(sub.category);
         const isNotExpired = sub.expiresAt > new Date();
         const hasUsageLeft = sub.usageCount < sub.usageLimit;
+        console.log(isPlanCovered,isNotExpired,hasUsageLeft)
 
         if (isPlanCovered) {
             if (isNotExpired && hasUsageLeft) {
@@ -53,6 +55,7 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
                     validSubscription = sub;
                     subscriptionIndex = i;
                 }
+                console.log(validSubscription)
             } else {
                 // This subscription is for the correct service but is invalid. Flag it for removal.
                 invalidSubsForThisServiceIndices.push(i);

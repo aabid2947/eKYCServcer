@@ -8,6 +8,7 @@ import {
   getUserServiceUsage, // Import the new controller function
 } from '../controllers/transactionController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
+import Transaction from '../models/TransactionModel.js';
 
 const router = express.Router();
 
@@ -24,5 +25,19 @@ router.route('/admin/all').get(protect,  authorize('admin'),getAllTransactions);
 
 // Get revenue statistics for subscription sales
 router.route('/admin/stats').get(protect, authorize('admin'), getServiceUsageStats);
+
+
+// router.delete('/admin/delete-all',protect, authorize('admin'), async (req, res, next) => {
+//   try {
+//     const result = await Transaction.deleteMany({});
+//     res.status(200).json({
+//       success: true,
+//       message: 'All transactions deleted successfully',
+//       deletedCount: result.deletedCount
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// });
 
 export default router;

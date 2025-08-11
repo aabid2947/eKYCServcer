@@ -3,7 +3,7 @@ import User from "../models/UserModel.js";
 import sendEmail from "../utils/sendEmail.js";
 import { validationResult } from 'express-validator';
 import { uploadToCloudinary, deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinary.js';
-
+import Service from "../models/Service.js";
 // @desc    Get user profile (current logged-in user)
 // @route   GET /api/users/profile
 // @access  Private
@@ -27,6 +27,63 @@ export const getUserProfile = async (req, res, next) => {
     res.status(404);
     throw new Error('User not found');
   }
+};
+
+export const promoteUserToSubcategory = async (req, res, next) => {
+    try {
+        const { userId, subcategory } = req.body;
+
+        if (!userId || !subcategory) {
+            res.status(400);
+            throw new Error('User ID and subcategory are required.');
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found.');
+        }
+
+        // Find all services in the subcategory to determine the usage limit
+        const servicesInSubcategory = await Service.find({ subcategory: subcategory });
+        if (servicesInSubcategory.length === 0) {
+            res.status(404);
+            throw new Error(`No services found for subcategory: '${subcategory}'`);
+        }
+
+        const usageLimit = servicesInSubcategory.length;
+        const now = new Date();
+        const expiresAt = new Date(new Date().setMonth(now.getMonth() + 1));
+
+        // Remove any pre-existing subscription for this subcategory to ensure a clean 1-month promotion
+        user.activeSubscriptions = user.activeSubscriptions.filter(s => s.category !== subcategory);
+
+        // Add the new promotional subscription
+        user.activeSubscriptions.push({
+            category: subcategory,
+            planType: 'promotional',
+            usageLimit: usageLimit,
+            purchasedAt: now,
+            expiresAt: expiresAt,
+            isPromotion: true,
+        });
+
+        // Add to promotedCategories array for easier UI lookup
+        if (!user.promotedCategories.includes(subcategory)) {
+            user.promotedCategories.push(subcategory);
+        }
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: `User ${user.name} promoted successfully for subcategory ${subcategory}.`,
+            data: user,
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };
 
 // @desc    Get all users (Admin)

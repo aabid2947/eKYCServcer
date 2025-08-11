@@ -12,7 +12,7 @@ const SubscriptionSchema = new mongoose.Schema({
   planType: { 
     type: String,
     required: true,
-    enum: ['monthly', 'yearly'],
+    enum: ['monthly', 'yearly','promotional'],
   },
   razorpaySubscriptionId: { // To track the subscription in your payment gateway
     type: String,

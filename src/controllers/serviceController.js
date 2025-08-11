@@ -218,3 +218,69 @@ export const deleteAllServices = async (req, res, next) => {
     next(err);
   }
 };
+
+
+
+// @desc    Create multiple new services
+// @route   POST /api/services/bulk
+// @access  Private (Admin Only)
+export const createMultipleServices = async (req, res, next) => {
+  try {
+    const servicesData = req.body; // Expect an array of service objects
+    console.log('BODY TYPE:', typeof req.body);
+console.log('BODY VALUE:', req.body)
+
+    // Validate that servicesData is an array
+    if (!Array.isArray(servicesData)) {
+      res.status(400);
+      throw new Error('Request body must be an array of service objects.');
+    }
+
+    const createdServices = [];
+    const errors = [];
+
+    for (const serviceData of servicesData) {
+      try {
+        // Parse nested JSON fields if they are strings (e.g., from FormData or if sent as stringified JSON)
+        if (serviceData.combo_price && typeof serviceData.combo_price === 'string') {
+            serviceData.combo_price = JSON.parse(serviceData.combo_price);
+        }
+        if (serviceData.inputFields && typeof serviceData.inputFields === 'string') {
+            serviceData.inputFields = JSON.parse(serviceData.inputFields);
+        }
+        if (serviceData.outputFields && typeof serviceData.outputFields === 'string') {
+            serviceData.outputFields = JSON.parse(serviceData.outputFields);
+        }
+        
+        // Note: Image upload for multiple services in a single request can be complex.
+        // This implementation assumes image URLs are provided within the serviceData
+        // or that images are handled separately (e.g., pre-uploaded to Cloudinary).
+        // If you need to handle multiple file uploads, you'd typically use 'upload.array()'
+        // and link files to their respective service objects, which is beyond this simple bulk create.
+
+        const createdService = await Service.create(serviceData);
+        createdServices.push(createdService);
+      } catch (error) {
+        errors.push({ serviceData, error: error.message });
+      }
+    }
+
+    if (createdServices.length > 0) {
+      res.status(201).json({
+        success: true,
+        message: `${createdServices.length} services created successfully.`,
+        data: createdServices,
+        failed: errors.length > 0 ? errors : undefined,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'No services were created. Check the provided data.',
+        failed: errors,
+      });
+    }
+
+  } catch (error) {
+    next(error);
+  }
+};
