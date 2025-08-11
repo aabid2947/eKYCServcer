@@ -19,7 +19,7 @@ router
   .route('/')
   .post(protect, authorize('admin'), addPricingPlan)
   .get(getAllPricingPlans);
-  router.route('/sync-subcategories').post(syncSubcategoriesInPlans);
+  // router.route('/sync-subcategories').post(syncSubcategoriesInPlans);
 
 router
   .route('/:id')
