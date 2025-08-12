@@ -38,22 +38,27 @@ export const createReview = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // 1. Verify the service exists (this is a good practice to keep)
+    // 1. Verify the service exists to get its details (like subcategory)
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found.' });
     }
 
-    // 2. UPDATED: Check eligibility from the user's record, not the service's.
-    // This checks if the 'usedServices' array on the user object contains the service being reviewed.
-    const hasUsedService = req.user.usedServices?.some(
-      (usedService) => usedService.service.toString() === serviceId
+    // 2. *** UPDATED ELIGIBILITY LOGIC ***
+    // A user can review if:
+    // a) They have used the *current* specific service.
+    // OR
+    // b) They have used *any* service within the same subcategory.
+    const hasUsedServiceInCategory = req.user.usedServices?.some(
+      (usedService) => 
+        usedService.service.toString() === serviceId ||
+        (service.subcategory && usedService.subcategory === service.subcategory)
     );
 
-    if (!hasUsedService) {
+    if (!hasUsedServiceInCategory) {
       return res.status(403).json({
         success: false,
-        error: 'You can only review services you have used.',
+        error: 'You must use a service in this category to leave a review.',
       });
     }
 
@@ -68,7 +73,7 @@ export const createReview = async (req, res) => {
     res.status(201).json({ success: true, data: review });
   } catch (error) {
     console.error(error);
-    // Handle case where user has already reviewed this service (unique index violation)
+    // Handle case where user has already reviewed this specific service (unique index violation)
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -225,7 +230,7 @@ export const deleteReviewById = async (req, res) => {
             return res.status(403).json({ success: false, error: 'Not authorized to delete this review' });
         }
 
-        await review.deleteOne(); // Use deleteOne or remove, findByIdAndDelete is also fine.
+        await review.deleteOne();
 
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
