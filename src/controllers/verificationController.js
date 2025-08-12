@@ -43,10 +43,10 @@ export const executeSubscribedService = async (req, res, next) => {
       resultData: result,
     });
     // 1. Increment the usage count on the specific subscription that was used
-    user.activeSubscriptions[req.subscriptionIndex].usageCount += 1;
+    // user.activeSubscriptions[req.subscriptionIndex].usageCount += 1;
 
     // 2. Increment the global usage count for the service (for general analytics)
-    service.globalUsageCount += 1;
+    // service.globalUsageCount += 1;
 
     // 3. Increment the user's historical usage log (for their personal history)
     const serviceData = {
@@ -54,30 +54,42 @@ export const executeSubscribedService = async (req, res, next) => {
       serviceName: service.name,
       subcategory: service.subcategory
     };
+ user.activeSubscriptions[req.subscriptionIndex].usageCount += 1;
 
+    // 2. Increment the global usage count for the service
+    service.globalUsageCount += 1;
+
+    // 3. Find the user's historical usage record for this service
     const serviceUsageIndex = user.usedServices.findIndex(
       s => s.service.toString() === service._id.toString()
     );
-    console.log(user.usedServices[serviceUsageIndex], ' ')
 
-     if (serviceUsageIndex > -1) {
-      // Logic for an already-used service
+    if (serviceUsageIndex > -1) {
+      // If the service has been used before, update the existing record.
       const usedService = user.usedServices[serviceUsageIndex];
-      usedService.usageCount += 1;
-      usedService.serviceName = service.name; // Keep name updated
-      // Set/update the subcategory string
+      
+      // Add the new timestamp to the history array.
+      usedService.usageTimestamps.push(new Date()); 
+      
+      // Ensure the usageCount reflects the total number of timestamps.
+      usedService.usageCount = usedService.usageTimestamps.length;
+      
+      // Keep other details like name and subcategory updated.
+      usedService.serviceName = service.name; 
       usedService.subcategory = service.subcategory;
+
     } else {
-      // Logic for a newly-used service
+      // If this is the first time, create a new record.
       user.usedServices.push({
         service: service._id,
         serviceName: service.name,
-        // Include the subcategory when creating the record
         subcategory: service.subcategory,
-        usageCount: 1,
+        // Initialize the history with the very first timestamp.
+        usageTimestamps: [new Date()],
+        // The count is now 1.
+        usageCount: 1, 
       });
     }
-    console.log(user.usedServices[serviceUsageIndex])
     // Concurrently save the updated service and user documents
     await Promise.all([service.save(), user.save({ validateModifiedOnly: true })]);
 

@@ -52,6 +52,10 @@ const UsedServiceSchema = new mongoose.Schema({
    subcategory: {
     type: String,
   },
+  usageTimestamps: {
+    type: [Date],
+    default: [],
+  },
   usageCount: {
     type: Number,
     required: true,
