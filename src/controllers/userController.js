@@ -31,8 +31,9 @@ export const getUserProfile = async (req, res, next) => {
 
 export const promoteUserToSubcategory = async (req, res, next) => {
     try {
-        const { userId, subcategory } = req.body;
-
+         const { userId, subcategory, multiplier } = req.body;
+        // Default to 1 if multiplier is not provided or invalid
+        const promotionMultiplier = parseInt(multiplier, 10) || 1; 
         if (!userId || !subcategory) {
             res.status(400);
             throw new Error('User ID and subcategory are required.');
@@ -50,13 +51,16 @@ export const promoteUserToSubcategory = async (req, res, next) => {
             res.status(404);
             throw new Error(`No services found for subcategory: '${subcategory}'`);
         }
+        console.log(90)
 
-        const usageLimit = servicesInSubcategory.length;
+        const usageLimit = servicesInSubcategory.length * promotionMultiplier;
         const now = new Date();
         const expiresAt = new Date(new Date().setMonth(now.getMonth() + 1));
+        console.log(90)
 
         // Remove any pre-existing subscription for this subcategory to ensure a clean 1-month promotion
         user.activeSubscriptions = user.activeSubscriptions.filter(s => s.category !== subcategory);
+        console.log(90)
 
         // Add the new promotional subscription
         user.activeSubscriptions.push({
@@ -67,13 +71,16 @@ export const promoteUserToSubcategory = async (req, res, next) => {
             expiresAt: expiresAt,
             isPromotion: true,
         });
+        console.log(90)
 
         // Add to promotedCategories array for easier UI lookup
         if (!user.promotedCategories.includes(subcategory)) {
             user.promotedCategories.push(subcategory);
         }
+        console.log(9)
 
         await user.save();
+        console.log(90)
 
         res.status(200).json({
             success: true,

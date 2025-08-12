@@ -39,7 +39,6 @@ const processImageUpload = async (file) => {
 // @access  Private/Admin
 export const createBlog = async (req, res) => {
   try {
-    console.log(req.body.blogData)
     const data = JSON.parse(req.body.blogData);
     const files = req.files;
 

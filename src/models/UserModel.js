@@ -49,6 +49,9 @@ const UsedServiceSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+   subcategory: {
+    type: String,
+  },
   usageCount: {
     type: Number,
     required: true,

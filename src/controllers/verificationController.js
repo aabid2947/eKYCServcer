@@ -11,11 +11,11 @@ export const executeSubscribedService = async (req, res, next) => {
   // The 'checkSubscription' middleware has already validated the user and their subscription.
   // It attaches the subscription to req.subscription and its index to req.subscriptionIndex.
   const { serviceKey, payload } = req.body;
-  const user = req.user; 
+  const user = req.user;
 
   const service = await Service.findOne({ service_key: serviceKey });
   try {
-    
+
     // This check is redundant as the middleware already does it, but serves as a good failsafe.
     if (!service) {
       res.status(404);
@@ -34,31 +34,50 @@ export const executeSubscribedService = async (req, res, next) => {
 
 
 
-      await VerificationResult.create({
+    await VerificationResult.create({
       verificationId: `VRF-${Date.now()}`,
       user: user._id,
       service: service._id,
       status: 'success',
       inputPayload: payload,
-      resultData: result, 
+      resultData: result,
     });
     // 1. Increment the usage count on the specific subscription that was used
     user.activeSubscriptions[req.subscriptionIndex].usageCount += 1;
-    
+
     // 2. Increment the global usage count for the service (for general analytics)
     service.globalUsageCount += 1;
 
     // 3. Increment the user's historical usage log (for their personal history)
+    const serviceData = {
+      service: service._id,
+      serviceName: service.name,
+      subcategory: service.subcategory
+    };
+
     const serviceUsageIndex = user.usedServices.findIndex(
-      (s) => s.service.toString() === service._id.toString()
+      s => s.service.toString() === service._id.toString()
     );
+    console.log(user.usedServices[serviceUsageIndex], ' ')
 
-    if (serviceUsageIndex > -1) {
-      user.usedServices[serviceUsageIndex].usageCount += 1;
+     if (serviceUsageIndex > -1) {
+      // Logic for an already-used service
+      const usedService = user.usedServices[serviceUsageIndex];
+      usedService.usageCount += 1;
+      usedService.serviceName = service.name; // Keep name updated
+      // Set/update the subcategory string
+      usedService.subcategory = service.subcategory;
     } else {
-      user.usedServices.push({ service: service._id, serviceName: service.name, usageCount: 1 });
+      // Logic for a newly-used service
+      user.usedServices.push({
+        service: service._id,
+        serviceName: service.name,
+        // Include the subcategory when creating the record
+        subcategory: service.subcategory,
+        usageCount: 1,
+      });
     }
-
+    console.log(user.usedServices[serviceUsageIndex])
     // Concurrently save the updated service and user documents
     await Promise.all([service.save(), user.save({ validateModifiedOnly: true })]);
 
@@ -69,7 +88,7 @@ export const executeSubscribedService = async (req, res, next) => {
     });
 
   } catch (error) {
-     if (user && service) {
+    if (user && service) {
       await VerificationResult.create({
         verificationId: `VRF-${Date.now()}`,
         user: user._id,
@@ -92,7 +111,7 @@ export const getUserVerificationHistory = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const total = await VerificationResult.countDocuments({ user: req.user.id });
-    
+
     const results = await VerificationResult.find({ user: req.user.id })
       .populate('service', 'name service_key imageUrl category') // Populate service details
       .sort({ createdAt: -1 }) // Show most recent first

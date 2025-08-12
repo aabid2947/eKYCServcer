@@ -37,7 +37,7 @@ export const resetPassword = async (req, res) => {
     try {
         const { token } = req.body;
         const { password } = req.body;
-        console.log(req.body);
+        // console.log(req.body);
         const result = await authService.resetPassword(token, password);
         res.status(200).json({ success: true, data: result });
     } catch (error) {
@@ -73,7 +73,7 @@ export const simpleRegister = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log(90)
+      
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
