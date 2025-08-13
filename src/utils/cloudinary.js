@@ -21,6 +21,7 @@ export const uploadToCloudinary = (buffer, folder) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: folder,
+        quality: 100,
         resource_type: 'auto',
       },
       (error, result) => {
