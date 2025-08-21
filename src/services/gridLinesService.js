@@ -53,8 +53,9 @@ export const callJsonApi = async (endpoint, body = {}) => {
                 responseBody: result
             });
             // console.log(result?.metadata?.fields?.message)
-            throw new Error(result?.error?.metadata?.fields?.[0]?.message || `Request failed with status ${response.status}`);
-        }
+             const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            throw new Error(msg);
+         }
 
         return result.data;
     } catch (error) {
