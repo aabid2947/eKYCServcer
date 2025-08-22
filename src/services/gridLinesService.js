@@ -52,10 +52,10 @@ export const callJsonApi = async (endpoint, body = {}) => {
                 statusText: response.statusText,
                 responseBody: result
             });
-            console.log(result)
-            const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            // console.log(result?.metadata?.fields?.message)
+             const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
             throw new Error(msg);
-        }
+         }
 
         return result.data;
     } catch (error) {
@@ -69,10 +69,6 @@ export const callJsonApi = async (endpoint, body = {}) => {
         // throw error;
     }
 };
-
-// src/services/gridLinesService.js
-
-// ... callJsonApi function is unchanged ...
 
 /**
  * A helper function to make POST requests with FormData (for file uploads).
