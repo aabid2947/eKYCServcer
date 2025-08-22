@@ -59,8 +59,10 @@ export const callJsonApi = async (endpoint, body = {}) => {
 
         return result.data;
     } catch (error) {
-        console.error(`❌ Error calling Gridlines endpoint ${endpoint}:`, error);
-        throw error;
+                  const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            throw new Error(msg);
+        // console.error(`❌ Error calling Gridlines endpoint ${endpoint}:`, error);
+        // throw error;
     }
 };
 
