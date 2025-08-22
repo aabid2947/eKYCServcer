@@ -209,8 +209,10 @@ export const loginUser = async (loginData) => {
     // if (!user.isVerified) {
     //     throw new Error('Please verify your email before logging in.');
     // }
-    if(!user.password){
-        throw new Error('Password not set');
+     if(!user.password){
+        // Remove user from database if no password is set
+        await User.findByIdAndDelete(user._id);
+        throw new Error('Account removed due to incomplete setup. Please register again.');
     }
 
 
