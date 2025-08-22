@@ -102,12 +102,13 @@ export const callFormApi = async (endpoint, formData) => {
                 statusText: response.statusText,
                 responseBody: result
             });
-            throw new Error(result.message || `API request failed with status ${response.status}`);
+            const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            throw new Error(msg);
         }
 
         return result.data;
     } catch (error) {
-        console.error(`Error calling Gridlines file-upload endpoint ${endpoint}:`, error);
-        throw error;
+         const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            throw new Error(msg);
     }
 };
