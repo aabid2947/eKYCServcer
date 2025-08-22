@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import Transaction from '../models/TransactionModel.js';
 import Coupon from '../models/CouponModel.js';
 import User from '../models/UserModel.js';
-import PricingPlan from '../models/PricingModel.js'; // <-- IMPORT THE NEW PRICING MODEL
+import PricingPlan from '../models/PricingModel.js'; 
 import Service from '../models/Service.js';
 
 // Initialize Razorpay with API credentials
@@ -13,13 +13,9 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// Creates a new subscription order in Razorpay
-// Endpoint: POST /api/payment/order
-// Requires authentication
-// Handles plan selection, coupon validation, and initial order creation
+
 export const createSubscriptionOrder = async (req, res, next) => {
     try {
-        // MODIFIED: 'category' is now 'planName', and 'plan' is 'planType' for clarity
         const { planName, planType, couponCode } = req.body;
         const user = await User.findById(req.user.id);
         console.log(planName)
@@ -29,10 +25,9 @@ export const createSubscriptionOrder = async (req, res, next) => {
             throw new Error('Plan name and plan type (monthly/yearly) are required.');
         }
 
-        // MODIFIED: Logic to block re-purchase is removed to allow renewals.
         // The renewal logic is handled after payment verification or in the free plan section.
 
-        // MODIFIED: Get plan pricing and limits from the database instead of a static object
+        //  Get plan pricing and limits from the database 
         const pricingPlan = await PricingPlan.findOne({ name: planName });
         if (!pricingPlan) {
             res.status(404);
@@ -52,14 +47,14 @@ export const createSubscriptionOrder = async (req, res, next) => {
         let discountValue = 0;
         let appliedCoupon = null;
 
-        // Coupon logic - updated to check against planName
+        // Coupon logic
         if (couponCode) {
             const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
             if (coupon) {
                 const isExpired = coupon.expiryDate && coupon.expiryDate < new Date();
                 const isUsedUp = coupon.maxUses && coupon.timesUsed >= coupon.maxUses;
                 const meetsMinAmount = originalAmountInRupees >= coupon.minAmount;
-                // MODIFIED: Applicable categories now map to plan names
+                //  Applicable categories map to plan names
                 const isApplicable = coupon.applicableCategories.length === 0 || coupon.applicableCategories.includes(planName);
 
                 if (!isExpired && !isUsedUp && meetsMinAmount && isApplicable) {
@@ -75,7 +70,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
         // Handle cases where the final amount is zero (100% discount)
         if (finalAmountInRupees <= 0) {
             const now = new Date();
-            // UPDATED: Handle renewal for free plans
+            // Handle renewal for free plans
             const existingSubIndex = user.activeSubscriptions.findIndex(sub =>
                 sub.category === planName && sub.expiresAt > now
             );
@@ -109,7 +104,7 @@ export const createSubscriptionOrder = async (req, res, next) => {
 
             await user.save();
 
-            // Optionally, create a transaction record for this free activation
+            // create a transaction record for this free activation
             await Transaction.create({
                 user: user._id,
                 category: planName,
@@ -183,10 +178,9 @@ export const createDynamicSubscriptionOrder = async (req, res, next) => {
             throw new Error('Subcategory is required for a dynamic plan purchase.');
         }
 
-        // --- Core Dynamic Logic ---
-        console.log(subcategory)
+       
 
-        // 1. Find all services belonging to this subcategory
+        //  Find all services belonging to this subcategory
         const servicesInSubcategory = await Service.find({ subcategory: subcategory });
 
         if (servicesInSubcategory.length === 0) {
@@ -234,10 +228,10 @@ export const createDynamicSubscriptionOrder = async (req, res, next) => {
             await pricingPlan.save();
         }
 
-        // `pricingPlan` now contains the created/updated plan
+        
 
 
-        // --- End of Core Dynamic Logic ---
+  
 
         const planType = 'monthly'; // Hardcoded as per requirement for 1-month expiry
         const planDetails = pricingPlan[planType];
@@ -333,7 +327,7 @@ export const verifySubscriptionPayment = async (req, res, next) => {
         transaction.razorpay_signature = razorpay_signature;
         await transaction.save();
 
-        // MODIFIED: Retrieve subscription plan details from the database
+        //  Retrieve subscription plan details from the database
         const pricingPlan = await PricingPlan.findOne({ name: transaction.category });
         if (!pricingPlan) {
             throw new Error(`Could not find plan details for '${transaction.category}' during subscription activation.`);
@@ -346,7 +340,7 @@ export const verifySubscriptionPayment = async (req, res, next) => {
         const user = await User.findById(transaction.user);
         const now = new Date();
 
-        // UPDATED: Check for an existing active subscription to update it (renewal)
+        //  Check for an existing active subscription to update it (renewal)
         const existingSubIndex = user.activeSubscriptions.findIndex(sub =>
             sub.category === transaction.category && sub.expiresAt > now
         );

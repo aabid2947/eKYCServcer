@@ -1,4 +1,3 @@
-// routes/transactionRoute.js
 
 import express from 'express';
 import {
@@ -18,7 +17,7 @@ router.route('/me').get(protect, getUserTransactions);
 // Get a user's service usage stats (for admins or the user themselves)
 router.route('/usage').get(protect, getUserServiceUsage);
 
-// --- Admin Routes ---
+//  Admin Routes 
 
 // Get all transactions in the system
 router.route('/admin/all').get(protect,  authorize('admin'),getAllTransactions);

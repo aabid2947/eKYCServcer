@@ -176,17 +176,17 @@ const updateLimits = async () => {
   try {
     console.log('Starting the pricing plan update script...');
 
-    // 1. Define the plans that should NOT be updated.
+    //  Define the plans that should NOT be updated.
     const excludedPlans = ['Personal', 'Professional', 'Enterprise'];
     console.log(`Excluding the following plans from update: ${excludedPlans.join(', ')}`);
 
-    // 2. Define the filter to find all plans NOT in the exclusion list.
+    //  Define the filter to find all plans NOT in the exclusion list.
     const filter = {
       name: { $nin: excludedPlans },
     };
 
-    // 3. Define the update operation using an aggregation pipeline.
-    // This allows us to use the properties of the document (like the size of an array) to set new values.
+    //  Define the update operation using an aggregation pipeline.
+    
     const updateOperation = [
       {
         $set: {
@@ -198,14 +198,10 @@ const updateLimits = async () => {
       },
     ];
 
-    // 4. Execute the update for all matching documents.
+    //  Execute the update for all matching documents.
     const result = await PricingPlan.updateMany(filter, updateOperation);
 
-    console.log('-------------------------------------------');
-    console.log('Update script finished successfully!');
-    console.log(`Total plans matched for update: ${result.matchedCount}`);
-    console.log(`Total plans successfully updated: ${result.modifiedCount}`);
-    console.log('-------------------------------------------');
+  
     
   } catch (error) {
     console.error('An error occurred during the update process:');
@@ -214,10 +210,10 @@ const updateLimits = async () => {
 };
 
 export const syncSubcategoriesInPlans = asyncHandler(async (req, res, next) => {
-    // Define the names of the plans you want to update
+    // Define the names of the plans 
     const planNamesToUpdate = ["Personal", "Professional", "Enterprise"];
 
-    // 1. Fetch the target pricing plans and all services in one go.
+    //. Fetch the target pricing plans and all services in one go.
     const [plans, allServices] = await Promise.all([
         PricingPlan.find({ name: { $in: planNamesToUpdate } }).populate('includedServices', 'subcategory'),
         Service.find({ subcategory: { $ne: null, $ne: '' } }).select('_id subcategory') // Get all services with a subcategory
@@ -231,7 +227,7 @@ export const syncSubcategoriesInPlans = asyncHandler(async (req, res, next) => {
     const updatedPlans = [];
 
     for (const plan of plans) {
-        // 2. Create a set of all unique subcategories present in the plan's current services.
+        //  Create a set of all unique subcategories present in the plan's current services.
         const subcategoriesInPlan = new Set();
         plan.includedServices.forEach(service => {
             if (service.subcategory) {
@@ -244,16 +240,16 @@ export const syncSubcategoriesInPlans = asyncHandler(async (req, res, next) => {
             continue;
         }
 
-        // 3. Find all service IDs that belong to these identified subcategories.
+        //  Find all service IDs that belong to these identified subcategories.
         const serviceIdsToAdd = allServices
             .filter(service => subcategoriesInPlan.has(service.subcategory))
             .map(service => service._id);
 
-        // 4. Create a new set of unique service IDs for the plan.
+        //  Create a new set of unique service IDs for the plan.
         const currentServiceIds = plan.includedServices.map(s => s._id.toString());
         const allServiceIdsForPlan = new Set([...currentServiceIds, ...serviceIdsToAdd.map(id => id.toString())]);
         
-        // 5. Update the plan's includedServices list.
+        // Update the plan's includedServices list.
         plan.includedServices = Array.from(allServiceIdsForPlan);
         
         // Save the updated plan and add the promise to an array.

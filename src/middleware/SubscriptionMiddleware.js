@@ -3,6 +3,65 @@ import PricingPlan from '../models/PricingModel.js';
 import asyncHandler from 'express-async-handler';
 
 /**
+ * @desc Middleware to remove redundant subcategory subscriptions covered by main plans
+ * This function checks if user has purchased a main plan (Personal, Professional, Enterprise)
+ * that already covers subcategories they bought separately, and removes those redundant subscriptions
+ * @access Private  
+ */
+export const cleanupRedundantSubscriptions = asyncHandler(async (req, res, next) => {
+    const user = req.user;
+    
+    if (!user.activeSubscriptions || user.activeSubscriptions.length === 0) {
+        return next();
+    }
+
+    // Get all pricing plans that have included services
+    const pricingPlans = await PricingPlan.find({}).populate('includedServices');
+    
+    // Track which subscriptions should be removed
+    const subscriptionsToRemove = [];
+    
+    // Check each user subscription against pricing plans
+    for (let i = 0; i < user.activeSubscriptions.length; i++) {
+        const subscription = user.activeSubscriptions[i];
+        
+        // Check if this subscription is covered by any pricing plan the user has
+        for (const plan of pricingPlans) {
+            // Check if user has this pricing plan active
+            const hasMainPlan = user.activeSubscriptions.some(sub => 
+                sub.category === plan.name && 
+                sub.expiresAt > new Date()
+            );
+            
+            if (hasMainPlan) {
+                // Check if current subscription's category/subcategory is covered by this plan
+                const isCoveredByPlan = plan.includedServices.some(service => 
+                    service.category === subscription.category || 
+                    service.subcategory === subscription.category
+                );
+                
+                if (isCoveredByPlan && subscription.category !== plan.name) {
+                    // This subscription is redundant - mark for removal
+                    subscriptionsToRemove.push(i);
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Remove redundant subscriptions if any found
+    if (subscriptionsToRemove.length > 0) {
+        user.activeSubscriptions = user.activeSubscriptions.filter(
+            (_, index) => !subscriptionsToRemove.includes(index)
+        );
+        await user.save();
+        // console.log(`Removed ${subscriptionsToRemove.length} redundant subscriptions for user ${user._id}`);
+    }
+    
+    next();
+});
+
+/**
  * @desc Middleware to check if a user has a valid and active subscription for a specific service.
  * It verifies:
  * 1. The subscription is not expired.
@@ -12,6 +71,7 @@ import asyncHandler from 'express-async-handler';
  * @access Private
  */
 export const checkSubscription = asyncHandler(async (req, res, next) => {
+    // console.log(req.body)
     const { serviceKey } = req.body;
     const user = req.user;
 
@@ -20,18 +80,23 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
         throw new Error('A serviceKey must be provided in the request body.');
     }
 
-    // 1. Find the service to get its ID, category, and subcategory
+    // First, clean up any redundant subscriptions
+    await cleanupRedundantSubscriptions(req, res, () => {});
+
+    // Find the service to get its ID, category, and subcategory
     const service = await Service.findOne({ service_key: serviceKey, is_active: true });
     if (!service) {
         res.status(404);
         throw new Error(`Service with key '${serviceKey}' not found or is inactive.`);
     }
 
-    // 2. Find all explicit pricing plans that include this service (e.g., "Personal", "Enterprise")
+    //  Find all explicit pricing plans that include this service (e.g., "Personal", "Enterprise")
+
     const explicitPlans = await PricingPlan.find({ includedServices: service._id }).select('name');
     const explicitPlanNames = new Set(explicitPlans.map(p => p.name));
-
-    // 3. Find a valid, active subscription that covers this service and clean up invalid ones.
+    // console.log(explicitPlans);
+    
+    //  Find a valid, active subscription that covers this service and clean up invalid ones.
     let validSubscription = null;
     let subscriptionIndex = -1;
     const invalidSubsIndices = [];
@@ -42,7 +107,7 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
         let isPlanCovered = false;
         // console.log(sub)
 
-        // --- FIX: Determine if the subscription covers the service ---
+        //  Determine if the subscription covers the service 
         // A plan is covered if:
         // a) The plan name directly matches the service's category or subcategory.
         // b) The service is explicitly listed in a bundled plan (like "Personal").
@@ -51,6 +116,7 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
             (service.subcategory && sub.category === service.subcategory) ||
             explicitPlanNames.has(sub.category)
         ) {
+            // console.log(`Subscription ${sub.category} covers service ${service.category}`);
             isPlanCovered = true;
         }
         // console.log(isPlanCovered)
@@ -62,7 +128,6 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
 
             if (isNotExpired && hasUsageLeft && !validSubscription) {
                 // This is a valid subscription. Store it and its index.
-                // We only need to find the first valid one.
                 validSubscription = sub;
                 subscriptionIndex = i;
             } else if (!isNotExpired || !hasUsageLeft) {
@@ -70,10 +135,10 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
                 invalidSubsIndices.push(i);
             }
         }
-        // --- FIX: Removed the incorrect 'else' block that would flag all other subscriptions for deletion.
+        
     }
 
-    // 4. Handle the outcome of the subscription check
+    //  Handle the outcome of the subscription check
     if (validSubscription) {
         // A valid subscription was found. Attach it to the request and proceed.
         req.subscription = validSubscription;
@@ -81,7 +146,7 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
         return next();
     }
 
-    // 5. If no valid subscription was found, clean up any invalid ones and throw an error.
+    //  If no valid subscription was found, clean up any invalid ones and throw an error.
     if (invalidSubsIndices.length > 0) {
         // Filter out subscriptions using their indices. This is safe as we are creating a new array.
         user.activeSubscriptions = user.activeSubscriptions.filter(

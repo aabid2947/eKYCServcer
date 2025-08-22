@@ -1,4 +1,3 @@
-// controllers/couponController.js
 
 import Coupon from '../models/CouponModel.js';
 

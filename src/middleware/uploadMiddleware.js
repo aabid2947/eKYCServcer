@@ -2,8 +2,6 @@
 import multer from 'multer';
 
 // Configure multer to use memory storage.
-// This is efficient because it avoids saving the file to the local disk.
-// The file is kept in memory as a buffer and can be sent directly to a cloud service like Cloudinary.
 const storage = multer.memoryStorage();
 
 // Create a filter to only accept image files.

@@ -1,4 +1,3 @@
-// controllers/serviceController.js
 
 import Service from '../models/Service.js';
 import { uploadToCloudinary, deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinary.js';
@@ -97,18 +96,18 @@ export const updateServiceById = async (req, res, next) => {
 
     // If a new image is uploaded (req.file exists)
     if (req.file) {
-        // 1. Delete the old image from Cloudinary if it exists
+        //  Delete the old image from Cloudinary if it exists
         if (existingService.imageUrl) {
             try {
                 const publicId = getPublicIdFromUrl(existingService.imageUrl);
                 await deleteFromCloudinary(publicId);
             } catch (cloudinaryError) {
                 console.error("Failed to delete old image from Cloudinary:", cloudinaryError);
-                // Decide if you want to proceed even if deletion fails
+                // proceed even if deletion fails
             }
         }
 
-        // 2. Upload the new image to Cloudinary
+        //  Upload the new image to Cloudinary
         const result = await uploadToCloudinary(req.file.buffer, 'services');
         updateData.imageUrl = result.secure_url;
     }
@@ -150,7 +149,7 @@ export const deleteServiceById = async (req, res, next) => {
       throw new Error('Service not found with that ID');
     }
 
-    // Optionally delete image from Cloudinary when deleting the service
+    //  delete image from Cloudinary when deleting the service
     if (service.imageUrl) {
         try {
             const publicId = getPublicIdFromUrl(service.imageUrl);
@@ -208,7 +207,6 @@ export const manualUpdate = async (req, res, next) => {
 export const deleteAllServices = async (req, res, next) => {
   try {
     // Note: This does not delete associated images from Cloudinary.
-    // A more robust implementation would fetch all services, loop through them to delete images, then delete the DB entries.
     const result = await Service.deleteMany({});
     res.status(200).json({
       message: 'All services deleted successfully. Cloudinary images were not removed.',
@@ -251,12 +249,7 @@ export const createMultipleServices = async (req, res, next) => {
             serviceData.outputFields = JSON.parse(serviceData.outputFields);
         }
         
-        // Note: Image upload for multiple services in a single request can be complex.
-        // This implementation assumes image URLs are provided within the serviceData
-        // or that images are handled separately (e.g., pre-uploaded to Cloudinary).
-        // If you need to handle multiple file uploads, you'd typically use 'upload.array()'
-        // and link files to their respective service objects, which is beyond this simple bulk create.
-
+      
         const createdService = await Service.create(serviceData);
         createdServices.push(createdService);
       } catch (error) {

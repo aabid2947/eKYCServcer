@@ -1,4 +1,4 @@
-// middleware/authMiddleware.js
+
 import jwt from 'jsonwebtoken';
 import User from '../models/UserModel.js';
 
@@ -19,7 +19,7 @@ export const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Get user from the token using the unified User model
-      // We exclude the password field from being attached to the request object
+      // Exclude the password field from being attached to the request object
       req.user = await User.findById(decoded.id).select('-password');
     
 

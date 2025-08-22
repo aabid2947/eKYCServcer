@@ -19,7 +19,7 @@ const router = express.Router();
 
 router.route('/service/:serviceId').get(getServiceReviews);
 
-// Route for creating a review 
+
 
 // Route for creating a review 
 router
@@ -47,10 +47,10 @@ router
     )
     .delete(protect, deleteReviewById);
 
-// Route for admins to get all reviews (no change)
+// Route for admins to get all reviews 
 router.route('/all').get(protect, authorize('admin'), getAllReviews);
 
-// Route for a user to get their own reviews (no change)
+// Route for a user to get their own reviews 
 router.route('/me').get(protect, getMyReviews);
 
 

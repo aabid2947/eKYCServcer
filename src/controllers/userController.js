@@ -1,4 +1,4 @@
-// controllers/userController.js
+
 import User from "../models/UserModel.js";
 import sendEmail from "../utils/sendEmail.js";
 import { validationResult } from 'express-validator';
@@ -177,7 +177,7 @@ export const updateUserProfile = async (req, res) => {
                 isVerified: updatedUser.isVerified,
                 
                 promotedCategories: updatedUser.promotedCategories,
-                activeSubscriptions: updatedUser.activeSubscriptions, // Ensure this is returned
+                activeSubscriptions: updatedUser.activeSubscriptions, 
                 usedServices: updatedUser.usedServices,
                 role: updatedUser.role,
                 createdAt: updatedUser.createdAt,
@@ -416,13 +416,13 @@ export const revokeSubscription = async (req, res, next) => {
 export const subscribeToNewsletter = async (req, res) => {
   const { email } = req.body;
 
-  // 1. Basic validation
+  //  Basic validation
   if (!email) {
     res.status(400);
     throw new Error('Email is required.');
   }
 
-  // 2. Find the user by email
+  //  Find the user by email
   const user = await User.findOne({ email });
 
   if (!user) {
@@ -432,16 +432,16 @@ export const subscribeToNewsletter = async (req, res) => {
   });
   }
 
-  // 3. Check if already subscribed
+  //  Check if already subscribed
   if (user.isSubscribedToNewsletter) {
     res.status(409);
     throw new Error('This email is already subscribed to our newsletter.');
   }
 
-  // 4. Update only the newsletter subscription field
+  //  Update only the newsletter subscription field
   await User.updateOne({ email }, { $set: { isSubscribedToNewsletter: true } });
 
-  // 5. Send success response
+  //  Send success response
   res.status(200).json({
     message: 'Thank you for subscribing to our newsletter!',
     email,
@@ -461,7 +461,6 @@ export const updateUserAvatar = async (req, res, next) => {
       throw new Error('User not found');
     }
     if (!req.file) {
-      // --- FIX: Set status code before throwing error ---
       res.status(400); 
       throw new Error('No image file uploaded');
     }

@@ -21,7 +21,7 @@ const sendEmail = async (options) => {
     },
     tls: {
       // This is required for servers with self-signed certificates or hostname mismatches.
-      // It bypasses the certificate validation. Use with caution.
+      // It bypasses the certificate validation.
       rejectUnauthorized: false,
     },
   });

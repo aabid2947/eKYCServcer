@@ -12,9 +12,7 @@ export const verifyGoogleToken = async (token) => {
     // If we get a payload, verification was successful
     return payload;
   } catch (error) {
-    // Log the detailed error for debugging on the server side.
     console.error('Detailed error verifying Google token:', error);
-    
     // Return null to indicate verification failure.
     // The service layer will handle throwing the user-facing error.
     return null;

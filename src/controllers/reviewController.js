@@ -3,11 +3,6 @@ import Review from '../models/ReviewModel.js';
 import Transaction from '../models/TransactionModel.js';
 import Service from '../models/Service.js'
 
-/**
- * @description Create a new review.
- * @route POST /api/reviews
- * @access Private
- */
 
 /**
  * @description Delete all reviews (Admin only)
@@ -28,6 +23,11 @@ export const deleteAllReviews = async (req, res) => {
     }
 };
 
+/**
+ * @description Create a new review.
+ * @route POST /api/reviews
+ * @access Private
+ */
 export const createReview = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -38,17 +38,17 @@ export const createReview = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // 1. Verify the service exists to get its details (like subcategory)
+    //  Verify the service exists to get its details (like subcategory)
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found.' });
     }
 
-    // 2. *** UPDATED ELIGIBILITY LOGIC ***
+    // ELIGIBILITY LOGIC
     // A user can review if:
-    // a) They have used the *current* specific service.
+    // a) They have used the current specific service.
     // OR
-    // b) They have used *any* service within the same subcategory.
+    // b) They have used any service within the same subcategory.
     const hasUsedServiceInCategory = req.user.usedServices?.some(
       (usedService) => 
         usedService.service.toString() === serviceId ||
@@ -62,7 +62,7 @@ export const createReview = async (req, res) => {
       });
     }
 
-    // 3. Create the review
+    //  Create the review
     const review = await Review.create({
       user: userId,
       service: serviceId,

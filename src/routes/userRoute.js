@@ -18,10 +18,10 @@ import { protect ,authorize} from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js'; 
 const router = express.Router();
 
-// User's own profile
+// User's  profile
 router.get('/profile', protect, getUserProfile);
 router.put(
-    '/profile/avatar', // This is a more RESTful route path
+    '/profile/avatar', 
     protect,
     upload.single('avatar'), 
     updateUserAvatar
@@ -50,7 +50,7 @@ router.route('/:userId/promote').post(protect, authorize('admin'), promoteUserCa
 router.route('/:userId/demote').post(protect, authorize('admin'), demoteUserCategory);
 router.route('/admin/promote-subcategory').post(protect, authorize('admin'), promoteUserToSubcategory)
 
-// NEW ADMIN ROUTES FOR SUBSCRIPTION MANAGEMENT
+//  ADMIN ROUTES FOR SUBSCRIPTION MANAGEMENT
 router.route('/admin/extend-subscription').post(protect, authorize('admin'), extendSubscription);
 router.route('/admin/revoke-subscription').post(protect, authorize('admin'), revokeSubscription);
 

@@ -1,4 +1,4 @@
-// src/validations/kycValidations.js
+
 import { body, validationResult } from 'express-validator';
 
 export const validatePan = [

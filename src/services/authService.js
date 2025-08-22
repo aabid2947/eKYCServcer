@@ -37,7 +37,7 @@ export const registerUser = async (userData) => {
     }
 };
 
-// --- UPDATED: VERIFY EMAIL WITH OTP ---
+//   VERIFY EMAIL WITH OTP 
 export const verifyEmailWithOtp = async (verificationData) => {
     const { email, otp } = verificationData;
 
@@ -58,7 +58,7 @@ export const verifyEmailWithOtp = async (verificationData) => {
 
     const token = generateToken(user._id, user.role);
 
-    // FIX: Return the full user object along with the token
+    // Return the full user object along with the token
     const userObject = user.toObject();
     delete userObject.password; // Ensure password hash is not sent
 
@@ -69,9 +69,8 @@ export const verifyEmailWithOtp = async (verificationData) => {
     };
 };
 
-// --- No changes needed for forgot/reset password ---
+//  forgot/reset password 
 export const forgotPassword = async (email) => {
-    // ... (logic is correct)
     const user = await User.findOne({ email });
     if (!user) {
         return { message: 'If a user with that email exists, a password reset link has been sent.' };
@@ -93,7 +92,6 @@ export const forgotPassword = async (email) => {
 };
 
 export const resetPassword = async (token, password) => {
-    // ... (logic is correct)
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const user = await User.findOne({ passwordResetToken: hashedToken, passwordResetExpires: { $gt: Date.now() } });
     if (!user) {
@@ -106,7 +104,7 @@ export const resetPassword = async (token, password) => {
     return { message: 'Password has been reset successfully.' };
 };
 
-// --- UPDATED: LOGIN WITH GOOGLE ---
+//  LOGIN WITH GOOGLE 
 export const loginWithGoogle = async (token) => {
     const firebaseUser = await verifyFirebaseToken(token);
     if (!firebaseUser) throw new Error('Invalid or expired Google sign-in token');
@@ -129,16 +127,16 @@ export const loginWithGoogle = async (token) => {
 
     const jwtToken = generateToken(user._id, user.role);
     
-    // FIX: Return the full user object
+    // Return the full user object
     const userObject = user.toObject();
     delete userObject.password;
 
     return { ...userObject, token: jwtToken };
 };
 
-// --- No changes needed for mobile registration ---
+ 
 export const registerUserWithMobile = async (userData) => {
-    // ... (logic is correct, only sends an OTP)
+   
     const { name, mobile } = userData;
     const userExists = await User.findOne({ mobile });
     if (userExists) throw new Error('User with this mobile number already exists');
@@ -155,7 +153,6 @@ export const registerUserWithMobile = async (userData) => {
 };
 
 export const loginUserWithMobile = async (loginData) => {
-    // ... (logic is correct, only sends an OTP)
     const { mobile } = loginData;
     const user = await User.findOne({ mobile });
     if (!user) throw new Error('User with this mobile number not found');
@@ -170,7 +167,7 @@ export const loginUserWithMobile = async (loginData) => {
     }
 };
 
-// --- UPDATED: VERIFY OTP AND LOGIN (MOBILE) ---
+//  VERIFY OTP AND LOGIN (MOBILE) 
 export const verifyOtpAndLogin = async (verificationData) => {
     const { mobile, otp } = verificationData;
     const user = await User.findOne({
@@ -188,19 +185,19 @@ export const verifyOtpAndLogin = async (verificationData) => {
 
     const token = generateToken(user._id, user.role);
 
-    // FIX: Return the full user object
+    //Return the full user object
     const userObject = user.toObject();
     delete userObject.password;
 
     return { ...userObject, token };
 };
 
-// --- UPDATED: LOGIN WITH EMAIL/PASSWORD ---
 export const loginUser = async (loginData) => {
     const { email, password } = loginData;
 
     // Use .select('+password') to include the password field for comparison
     const user = await User.findOne({ email }).select('+password');
+    console.log(user)
 
     if (!user) {
         throw new Error('Invalid credentials');
@@ -209,6 +206,11 @@ export const loginUser = async (loginData) => {
     // if (!user.isVerified) {
     //     throw new Error('Please verify your email before logging in.');
     // }
+    if(!user.password){
+        // Remove user from database if no password is set
+        await User.findByIdAndDelete(user._id);
+        throw new Error('Account removed due to incomplete setup. Please register again.');
+    }
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
@@ -217,7 +219,7 @@ export const loginUser = async (loginData) => {
 
     const token = generateToken(user._id, user.role);
 
-    // FIX: Return the full user object but remove the password before sending
+    //  Return the full user object but remove the password before sending
     const userObject = user.toObject();
     delete userObject.password; // Crucial step to remove the hashed password
 

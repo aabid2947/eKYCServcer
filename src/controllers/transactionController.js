@@ -1,6 +1,6 @@
-// controllers/transactionController.js
+
 import Transaction from '../models/TransactionModel.js';
-import User from '../models/UserModel.js'; // Import the User model for the new function
+import User from '../models/UserModel.js'; 
 
 /**
  * @desc    Get transactions for the logged-in user (paginated)
@@ -101,7 +101,7 @@ export const getUserServiceUsage = async (req, res, next) => {
             throw new Error('User not found');
         }
 
-        // We can also enrich this data with the user's current subscription limits
+
         const usageData = {
             servicesUsed: user.usedServices,
             subscriptionStatus: user.activeSubscriptions,
