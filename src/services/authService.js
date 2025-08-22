@@ -209,6 +209,10 @@ export const loginUser = async (loginData) => {
     // if (!user.isVerified) {
     //     throw new Error('Please verify your email before logging in.');
     // }
+    if(!user.password){
+        throw new Error('Password not set');
+    }
+
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
