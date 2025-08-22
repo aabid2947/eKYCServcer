@@ -59,7 +59,7 @@ export const callJsonApi = async (endpoint, body = {}) => {
 
         return result.data;
     } catch (error) {
-                  const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+                  const msg = error?.message || error?.metadata?.fields?.[0]?.message || `Request failed`;
             throw new Error(msg);
         // console.error(`❌ Error calling Gridlines endpoint ${endpoint}:`, error);
         // throw error;
@@ -108,7 +108,7 @@ export const callFormApi = async (endpoint, formData) => {
 
         return result.data;
     } catch (error) {
-         const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+         const msg = error?.message || error?.metadata?.fields?.[0]?.message || `Request failed`;
             throw new Error(msg);
     }
 };
