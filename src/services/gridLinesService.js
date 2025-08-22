@@ -59,7 +59,7 @@ export const callJsonApi = async (endpoint, body = {}) => {
 
         return result.data;
     } catch (error) {
-        // console.log(error)
+        console.log(error)
         const msg = error?.message || error?.metadata?.fields?.[0]?.message || `Request failed`;
         if (msg === 'Bad request.') {
             throw new Error('Invalid request. Please check the input data and try again.');
