@@ -8,7 +8,7 @@ import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
-// **CORRECTED MIDDLEWARE ORDER**
+
 // `upload.single('file')` now runs before `checkSubscription`.
 router
   .route('/verify')

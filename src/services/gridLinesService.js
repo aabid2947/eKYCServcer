@@ -6,6 +6,7 @@
  * @requires an environment variable `REACT_APP_GRIDLINES_API_KEY` to be set.
  */
 import dotenv from 'dotenv';
+import axios from 'axios';
 dotenv.config();
 const API_BASE_URL = 'https://api.gridlines.io';
 const API_KEY = process.env.GRIDLINES_API_KEY; // Use environment variables in production
@@ -43,7 +44,8 @@ export const callJsonApi = async (endpoint, body = {}) => {
                 'X-Reference-ID': '',
             },
             body: JSON.stringify(requestBody),
-        });
+        }); 
+        console.log(body.consent)
 
         const result = await response.json();
 
@@ -76,32 +78,35 @@ export const callJsonApi = async (endpoint, body = {}) => {
  * It automatically adds the API key and consent parameter.
  * @param {string} endpoint - The API endpoint path.
  * @param {FormData} formData - The FormData object containing the file(s) and other fields.
+ * @param {string} referenceId - The reference ID to be passed in the header.
  * @returns {Promise<object>} - A promise that resolves to the 'data' object from the API response.
  * @throws {Error} - Throws an error if the API call fails or returns a non-200 status.
  */
-export const callFormApi = async (endpoint, formData) => {
+export const callFormApi = async (endpoint, formData, referenceId = '') => {
     if (!API_KEY) {
         throw new Error("Gridlines API key is not configured.");
     }
 
-    formData.append('consent', 'Y'); // Add mandatory consent
+    formData.append('consent', 'Y'); 
+    
+    console.log('Sending FormData to endpoint:', endpoint);
 
     try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            method: 'POST',
+        const response = await axios.post(`${API_BASE_URL}${endpoint}`, formData, {
             headers: {
                 'Accept': 'application/json',
-                // 'Content-Type' is set automatically by fetch for FormData
                 'X-API-Key': API_KEY,
                 'X-Auth-Type': 'API-Key',
-                'X-Reference-ID': formData.get('reference_id') || '',
-            },
-            body: formData,
+                // **FIXED**: Use the passed referenceId directly
+                'X-Reference-ID': referenceId,
+                // This line is correct for the 'form-data' library
+                ...formData.getHeaders()
+            }
         });
 
-        const result = await response.json();
+        const result = response.data;
 
-        if (!response.ok || result.status !== 200) {
+        if (response.status !== 200 || result.status !== 200) {
             console.error(`❌ API error details for endpoint: ${endpoint}`, {
                 status: response.status,
                 statusText: response.statusText,
@@ -113,7 +118,12 @@ export const callFormApi = async (endpoint, formData) => {
 
         return result.data;
     } catch (error) {
-        const msg = error?.message || error?.metadata?.fields?.[0]?.message || `Request failed`;
+        console.error('FormData API Error:', error);
+        if (error.response) {
+            const msg = error.response.data?.error?.message || error.response.data?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            throw new Error(msg);
+        }
+        const msg = error?.message || `Request failed`;
         throw new Error(msg);
     }
 };
