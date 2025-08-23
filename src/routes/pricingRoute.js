@@ -25,7 +25,7 @@ router
 router
   .route('/:id')
   // .put( updatePricingPlan)
-  .delete(  deletePricingPlan)
-  .put(addServiceToPlan)
+  .delete(  protect, authorize('admin'),deletePricingPlan)
+  .put(protect, authorize('admin'),addServiceToPlan)
 
 export default router;
