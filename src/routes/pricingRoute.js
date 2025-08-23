@@ -6,6 +6,7 @@ import {
   getAllPricingPlans,
   addMultiplePricingPlans,
   updateLimits,
+  addServiceToPlan,
   syncSubcategoriesInPlans
   
 } from '../controllers/pricingController.js';
@@ -23,7 +24,8 @@ router
 
 router
   .route('/:id')
-  .put(protect, authorize('admin'), updatePricingPlan)
-  .delete(protect, authorize('admin'), deletePricingPlan);
+  // .put( updatePricingPlan)
+  .delete(  deletePricingPlan)
+  .put(addServiceToPlan)
 
 export default router;

@@ -81,10 +81,10 @@ const updatePricingPlan = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const deletePricingPlan = asyncHandler(async (req, res) => {
-  const pricingPlan = await PricingPlan.findById(req.params.id);
+  const pricingPlan = await PricingPlan.findByIdAndDelete(req.params.id);
 
   if (pricingPlan) {
-    await pricingPlan.remove();
+    // await pricingPlan.remove();
     res.status(200).json({ message: 'Pricing plan has been removed.' });
   } else {
     res.status(404);
@@ -265,6 +265,63 @@ export const syncSubcategoriesInPlans = asyncHandler(async (req, res, next) => {
     });
 });
 
+/**
+ * @desc    Add service to pricing plan using service key
+ * @route   POST /api/pricing/add-service
+ * @access  Private/Admin
+ */
+const addServiceToPlan = asyncHandler(async (req, res) => {
+  const { planName, serviceKey } = req.body;
+
+  if (!planName || !serviceKey) {
+    res.status(400);
+    throw new Error('Please provide both plan name and service key.');
+  }
+  console.log(planName)
+
+  // Find the pricing plan by name
+  const plan = await PricingPlan.findOne({ name: planName });
+  if (!plan) {
+    res.status(404);
+    throw new Error(`Pricing plan with name '${planName}' not found.`);
+  }
+
+  // Find the service by service key
+  const service = await Service.findOne({ service_key: serviceKey });
+  if (!service) {
+    res.status(404);
+    throw new Error(`Service with key '${serviceKey}' not found.`);
+  }
+
+  // Check if service is already included in the plan
+  const isServiceAlreadyIncluded = plan.includedServices.some(
+    serviceId => serviceId.toString() === service._id.toString()
+  );
+
+  if (isServiceAlreadyIncluded) {
+    res.status(400);
+    throw new Error(`Service '${serviceKey}' is already included in plan '${planName}'.`);
+  }
+
+  // Add service to the plan
+  plan.includedServices.push(service._id);
+  await plan.save();
+
+  res.status(200).json({
+    success: true,
+    message: `Service '${serviceKey}' successfully added to plan '${planName}'.`,
+    data: {
+      planName: plan.name,
+      serviceAdded: {
+        serviceKey: service.service_key,
+        serviceName: service.name,
+        serviceId: service._id
+      },
+      totalServicesInPlan: plan.includedServices.length
+    }
+  });
+});
+
 
 export {
   addPricingPlan,
@@ -272,5 +329,6 @@ export {
   deletePricingPlan,
   getAllPricingPlans,
   addMultiplePricingPlans,
-  updateLimits
+  updateLimits,
+  addServiceToPlan
 };

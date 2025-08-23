@@ -71,7 +71,7 @@ export const cleanupRedundantSubscriptions = asyncHandler(async (req, res, next)
  * @access Private
  */
 export const checkSubscription = asyncHandler(async (req, res, next) => {
-    // console.log(req.body)
+    console.log(req.body)
     const { serviceKey } = req.body;
     const user = req.user;
 
@@ -94,7 +94,9 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
 
     const explicitPlans = await PricingPlan.find({ includedServices: service._id }).select('name');
     const explicitPlanNames = new Set(explicitPlans.map(p => p.name));
-    // console.log(explicitPlans);
+
+    console.log(explicitPlans);
+   
     
     //  Find a valid, active subscription that covers this service and clean up invalid ones.
     let validSubscription = null;
@@ -106,6 +108,11 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
         const sub = user.activeSubscriptions[i];
         let isPlanCovered = false;
         // console.log(sub)
+        console.log("service.category",service.category);
+        console.log("sub.category",sub.category);
+          console.log("service.sub",service.subcategory);
+        // console.log("sub.category",sub.category);
+        console.log( explicitPlanNames);
 
         //  Determine if the subscription covers the service 
         // A plan is covered if:

@@ -11,6 +11,7 @@ export const protect = async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     try {
+      console.log(90)
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 

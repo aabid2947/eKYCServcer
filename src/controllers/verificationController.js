@@ -124,7 +124,7 @@ export const executeSubscribedService = async (req, res, next) => {
       });
     }
      const msg = error?.message || error?.metadata?.fields?.[0]?.message || `Request failed`;
-    next(msg);
+    next(error);
   }
 };
 
