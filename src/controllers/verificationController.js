@@ -123,7 +123,8 @@ export const executeSubscribedService = async (req, res, next) => {
         errorMessage: error.message,
       });
     }
-    next(error);
+     const msg = error?.message || error?.metadata?.fields?.[0]?.message || `Request failed`;
+    next(msg);
   }
 };
 

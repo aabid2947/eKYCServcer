@@ -31,7 +31,7 @@ export const callJsonApi = async (endpoint, body = {}) => {
         ...body,
         consent: "Y", // Mandatory consent parameter
     };
-      console.log(requestBody,`${API_BASE_URL}${endpoint}`,API_KEY)
+    //   console.log(requestBody,`${API_BASE_URL}${endpoint}`,API_KEY)
       
     try {
         const response = await axios.post(`${API_BASE_URL}${endpoint}`, requestBody, {
@@ -85,7 +85,7 @@ export const callFormApi = async (endpoint, formData, referenceId = '') => {
 
     formData.append('consent', 'Y'); 
     
-    console.log('Sending FormData to endpoint:', endpoint);
+    // console.log('Sending FormData to endpoint:', endpoint);
 
     try {
         const response = await axios.post(`${API_BASE_URL}${endpoint}`, formData, {
@@ -108,7 +108,9 @@ export const callFormApi = async (endpoint, formData, referenceId = '') => {
                 statusText: response.statusText,
                 responseBody: result
             });
+
             const msg = result?.error?.message || result?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+            console.log("here",msg)
             throw new Error(msg);
         }
 
@@ -117,9 +119,12 @@ export const callFormApi = async (endpoint, formData, referenceId = '') => {
         console.error('FormData API Error:', error);
         if (error.response) {
             const msg = error.response.data?.error?.message || error.response.data?.error?.metadata?.fields?.[0]?.message || `Request failed`;
+             console.log(msg)
             throw new Error(msg);
         }
+
         const msg = error?.message || `Request failed`;
+         console.log(msg)
         throw new Error(msg);
     }
 };
