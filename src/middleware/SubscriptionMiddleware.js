@@ -107,12 +107,12 @@ export const checkSubscription = asyncHandler(async (req, res, next) => {
     for (let i = 0; i < user.activeSubscriptions.length; i++) {
         const sub = user.activeSubscriptions[i];
         let isPlanCovered = false;
-        console.log(sub)
-        console.log("service.category",service.category);
-        console.log("sub.category",sub.category);
-          console.log("service.sub",service.subcategory);
+        // console.log(sub)
+        // console.log("service.category",service.category);
         // console.log("sub.category",sub.category);
-        console.log( explicitPlanNames);
+        //   console.log("service.sub",service.subcategory);
+        // // console.log("sub.category",sub.category);
+        // console.log( explicitPlanNames);
 
         //  Determine if the subscription covers the service 
         // A plan is covered if:

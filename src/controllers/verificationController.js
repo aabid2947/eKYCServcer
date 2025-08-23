@@ -118,6 +118,16 @@ export const executeSubscribedService = async (req, res, next) => {
     };
     user.activeSubscriptions[req.subscriptionIndex].usageCount += 1;
 
+    // Check if usage limit is reached and remove subscription if needed
+    const currentSubscription = user.activeSubscriptions[req.subscriptionIndex];
+    if (currentSubscription.usageCount >= currentSubscription.usageLimit) {
+      // Remove this subscription as it has reached its limit
+      user.activeSubscriptions = user.activeSubscriptions.filter(
+        (_, index) => index !== req.subscriptionIndex
+      );
+      console.log(`Removed subscription ${currentSubscription.category} for user ${user._id} - usage limit reached`);
+    }
+
     // Increment the global usage count for the service
     service.globalUsageCount += 1;
 

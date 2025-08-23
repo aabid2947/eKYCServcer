@@ -27,7 +27,7 @@ const sendSms = async (mobileNumber, message) => {
     try {
         const response = await axios.post('https://api.smscountry.com/v2/sendsms', smsData, config);
         
-        console.log('SMS Sent Successfully:', response.data);
+        // console.log('SMS Sent Successfully:', response.data);
         return response.data;
 
     } catch (error) {
