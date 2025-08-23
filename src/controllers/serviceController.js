@@ -1,5 +1,6 @@
 
 import Service from '../models/Service.js';
+import PricingPlan from '../models/PricingModel.js';
 import { uploadToCloudinary, deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinary.js';
 
 // @desc    Get all ACTIVE services for frontend display
@@ -68,9 +69,56 @@ export const createService = async (req, res, next) => {
 
     const createdService = await Service.create(serviceData);
 
+    // Automatically add the new service to Professional and Enterprise plans
+    // For Personal plan, only add if there's already a service with the same subcategory
+    try {
+      const allPlans = await PricingPlan.find({ 
+        name: { $in: ['Personal', 'Professional', 'Enterprise'] } 
+      }).populate('includedServices', 'subcategory');
+      
+      const updatePromises = [];
+      
+      for (const plan of allPlans) {
+        let shouldAddService = false;
+        
+        if (plan.name === 'Professional' || plan.name === 'Enterprise') {
+          // Always add to Professional and Enterprise plans
+          shouldAddService = true;
+        } else if (plan.name === 'Personal') {
+          // For Personal plan, only add if there's already a service with the same subcategory
+          if (createdService.subcategory) {
+            const hasMatchingSubcategory = plan.includedServices.some(
+              service => service.subcategory === createdService.subcategory
+            );
+            shouldAddService = hasMatchingSubcategory;
+          }
+        }
+        
+        if (shouldAddService) {
+          // Check if service is already included (though it shouldn't be since it's new)
+          const isServiceAlreadyIncluded = plan.includedServices.some(
+            service => service._id.toString() === createdService._id.toString()
+          );
+          
+          if (!isServiceAlreadyIncluded) {
+            plan.includedServices.push(createdService._id);
+            updatePromises.push(plan.save());
+          }
+        }
+      }
+      
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        console.log(`Service '${createdService.service_key}' automatically added to ${updatePromises.length} pricing plans.`);
+      }
+    } catch (planUpdateError) {
+      console.error('Error adding service to pricing plans:', planUpdateError);
+      // Don't fail the entire request if plan update fails, just log the error
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Service created successfully',
+      message: 'Service created successfully and added to applicable pricing plans',
       data: createdService,
     });
   } catch (error) {

@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 const FieldSchema = new mongoose.Schema({
   name: { type: String, required: [true, 'Please provide a field name'] },
   label: { type: String, required: [true, 'Please provide a user-friendly label'] },
-  type: { type: String, required: [true, 'Please specify the field type'], enum: ['text', 'number', 'file', 'date', 'string', 'object', 'array'] },
+  type: { type: String, required: [true, 'Please specify the field type'], enum: ['text', 'number', 'file', 'date', 'string', 'object', 'array','boolean'] },
   placeholder: { type: String, required: false },
 }, { _id: false });
 
