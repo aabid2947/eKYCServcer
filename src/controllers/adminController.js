@@ -3,7 +3,6 @@
 import { validationResult } from 'express-validator';
 import User from '../models/UserModel.js'; // Use the User model
 import generateToken from '../utils/generateToken.js';
-
 // This function now creates a new User with the 'admin' role
 export const register = async (req, res, next) => {
   const errors = validationResult(req);
