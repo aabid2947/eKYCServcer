@@ -1,4 +1,4 @@
-// import express from 'express';
+import express from 'express';
 import { check } from 'express-validator';
 import { register, login, getAdminDashboard ,getAllAdmin} from '../controllers/adminController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js'; // Import new middleware
@@ -38,4 +38,4 @@ router.get(
 // // Protected and Authorized admin dashboard route
 router.get('/dashboard', protect, authorize('admin'), getAdminDashboard);
 
-// export default router
+export default router
