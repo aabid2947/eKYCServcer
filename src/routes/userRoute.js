@@ -7,6 +7,7 @@ import {
     sendSubscriptionReminder,
     updateUserProfile,
     getUserById,
+    deleteUserById,
     extendSubscription,
     revokeSubscription,
     subscribeToNewsletter,
@@ -42,6 +43,7 @@ router.route('/all').get(protect, authorize('admin'), getAllUsers);
 router.route('/:userId/send-reminder').post(protect, authorize('admin'), sendSubscriptionReminder);
 
 router.route('/:userId').get(protect, authorize('admin'), getUserById);
+router.route('/:userId').delete(protect, authorize('admin'), deleteUserById);
 
 router.post('/newsletter-subscribe', subscribeToNewsletter);
 

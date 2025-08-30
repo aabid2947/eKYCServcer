@@ -137,6 +137,61 @@ export const getUserById = async (req, res, next) => {
     }
 };
 
+// @desc    Delete user by ID (Admin only)
+// @route   DELETE /api/users/:userId
+// @access  Private/Admin
+export const deleteUserById = async (req, res, next) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            res.status(400);
+            throw new Error('User ID is required.');
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found.');
+        }
+
+        // Prevent admin from deleting themselves
+        if (userId === req.user.id) {
+            res.status(400);
+            throw new Error('You cannot delete your own account.');
+        }
+
+        // Prevent deletion of other admin accounts (optional security measure)
+        if (user.role === 'admin') {
+            res.status(400);
+            throw new Error('Cannot delete admin accounts.');
+        }
+
+        // Delete user avatar from Cloudinary if it exists
+        if (user.avatar) {
+            try {
+                const publicId = getPublicIdFromUrl(user.avatar);
+                await deleteFromCloudinary(publicId);
+            } catch (cloudinaryError) {
+                console.error('Failed to delete user avatar from Cloudinary:', cloudinaryError);
+                // Continue with user deletion even if avatar deletion fails
+            }
+        }
+
+        // Delete the user
+        await User.findByIdAndDelete(userId);
+
+        res.status(200).json({
+            success: true,
+            message: `User ${user.name} (${user.email}) has been successfully deleted.`,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 // @desc    Update user profile (current logged-in user)
 // @route   PUT /api/users/profile
