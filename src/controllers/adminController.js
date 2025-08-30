@@ -1,3 +1,22 @@
+// Delete an admin by ID (admin only, cannot delete self)
+export const deleteAdminById = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    // Prevent self-deletion
+    if (req.user._id.toString() === adminId) {
+      return res.status(400).json({ success: false, message: "You cannot delete yourself." });
+    }
+    // Find the admin
+    const admin = await User.findOne({ _id: adminId, role: 'admin' });
+    if (!admin) {
+      return res.status(404).json({ success: false, message: "Admin not found." });
+    }
+    await admin.deleteOne();
+    res.status(200).json({ success: true, message: "Admin deleted successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
 // controllers/adminController.js
 
 import { validationResult } from 'express-validator';

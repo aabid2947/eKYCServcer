@@ -1,11 +1,19 @@
 import express from 'express';
 import { check } from 'express-validator';
-import { register, login, getAdminDashboard ,getAllAdmin} from '../controllers/adminController.js';
+import { register, login, getAdminDashboard ,getAllAdmin, deleteAdminById } from '../controllers/adminController.js';
+
+// Delete an admin by ID (admin only, cannot delete self)
 import { protect, authorize } from '../middleware/authMiddleware.js'; // Import new middleware
 
 const router = express.Router();
+router.delete(
+  '/:adminId',
+  protect,
+  authorize('admin'),
+  deleteAdminById
+);
 
-// // Public route for an admin to log in. The controller handles the role check.
+// Public route for an admin to log in. The controller handles the role check.
 router.post(
   '/login',
   [
